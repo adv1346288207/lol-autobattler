@@ -86,10 +86,10 @@ export function applyAction(state: GameState, rng: Rng, action: Action): BattleE
   }
 }
 
-/** 移动/交换：手牌或场上卡 → 场上位置 1~6；目标为空则放置，非空则交换 */
+/** 移动/交换：手牌或场上卡 → 场上位置 1~6（目标为空则放置，非空则交换）；位置 0 = 场上卡回手牌 */
 function applyMove(p: PlayerState, cardUid: number, position: number): void {
-  if (!Number.isInteger(position) || position < 1 || position > shopConfig.boardSize) {
-    throw new Error(`move: 非法位置 ${position}（1~${shopConfig.boardSize}）`);
+  if (!Number.isInteger(position) || position < 0 || position > shopConfig.boardSize) {
+    throw new Error(`move: 非法位置 ${position}（0=回手牌，1~${shopConfig.boardSize}=棋盘位）`);
   }
   // 定位卡牌来源
   let card: CardInstance;
@@ -106,6 +106,15 @@ function applyMove(p: PlayerState, cardUid: number, position: number): void {
     card = p.board[boardIdx]!;
     sourceIdx = boardIdx;
     fromHand = false;
+  }
+
+  // 位置 0：场上卡 → 回手牌（手牌卡执行则抛错）
+  if (position === 0) {
+    if (fromHand) throw new Error("move: 该卡已在手牌");
+    p.board[sourceIdx] = null;
+    card.position = null;
+    p.hand.push(card);
+    return;
   }
 
   const target = p.board[position - 1] ?? null;

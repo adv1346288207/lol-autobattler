@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeCtx, place } from "./helpers";
 import { beginRound } from "../core/phase";
-import { upgradeShopAction } from "../core/economy";
+import { autoUpgradeIfPossible, upgradeShopAction } from "../core/economy";
 import { createCardInstance } from "../core/state";
 
 describe("回合收入（金币阶梯 + 自动经验）", () => {
@@ -37,20 +37,25 @@ describe("回合收入（金币阶梯 + 自动经验）", () => {
     expect(p.gold).toBe(20);
   });
 
-  it("场上兰：额外 +1 经验；金兰：额外 +2 经验", () => {
+  it("场上兰：额外 +1 经验，凑满自动升级（2 经验 → 升 2 级）", () => {
     const { state, rng, p } = makeCtx();
     place(state, p, "lan", 1);
     beginRound(state, rng);
-    expect(p.exp).toBe(2); // 基础 1 + 兰 1
+    // 基础 1 + 兰 1 = 2 经验 = 1→2 所需 → 自动升级，经验清零
+    expect(p.shopLevel).toBe(2);
+    expect(p.exp).toBe(0);
+  });
 
-    const { state: s2, rng: r2, p: p2 } = makeCtx();
-    const goldLan = createCardInstance(s2, "lan", 2);
+  it("金兰：额外 +2 经验，共 3 经验 → 升 2 级后余 1", () => {
+    const { state, rng, p } = makeCtx();
+    const goldLan = createCardInstance(state, "lan", 2);
     goldLan.atk = 6;
     goldLan.hp = 6;
     goldLan.position = 1;
-    p2.board[0] = goldLan;
-    beginRound(s2, r2);
-    expect(p2.exp).toBe(3); // 基础 1 + 金兰 2
+    p.board[0] = goldLan;
+    beginRound(state, rng);
+    expect(p.shopLevel).toBe(2);
+    expect(p.exp).toBe(1);
   });
 
   it("龙野：每回合 1 次免费刷新；免费刷新不累积", () => {
@@ -72,6 +77,41 @@ describe("回合收入（金币阶梯 + 自动经验）", () => {
     p.board[0] = goldLongye;
     beginRound(state, rng);
     expect(p.freeRefresh).toBe(2);
+  });
+});
+
+describe("自动升级（经验≥所需 → 自动连续升级）", () => {
+  it("经验正好等于所需 → 自动升级并清零", () => {
+    const { p } = makeCtx();
+    p.exp = 2; // 1→2 需 2
+    autoUpgradeIfPossible(p);
+    expect(p.shopLevel).toBe(2);
+    expect(p.exp).toBe(0);
+  });
+
+  it("经验充足时连续升级：12 经验从 1 级 → 3 级，余 2", () => {
+    const { p } = makeCtx();
+    p.exp = 12; // 1→2 需 2（余10），2→3 需 8（余2）
+    autoUpgradeIfPossible(p);
+    expect(p.shopLevel).toBe(3);
+    expect(p.exp).toBe(2);
+  });
+
+  it("经验不足 → 不升级", () => {
+    const { p } = makeCtx();
+    p.exp = 1;
+    autoUpgradeIfPossible(p);
+    expect(p.shopLevel).toBe(1);
+    expect(p.exp).toBe(1);
+  });
+
+  it("满级后不再升级", () => {
+    const { p } = makeCtx();
+    p.shopLevel = 5;
+    p.exp = 999;
+    autoUpgradeIfPossible(p);
+    expect(p.shopLevel).toBe(5);
+    expect(p.exp).toBe(999);
   });
 });
 

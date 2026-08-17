@@ -6,7 +6,7 @@
 import type { BattleEvent, GameState, Pairing, Phase } from "./state";
 import { alivePlayers } from "./state";
 import type { Rng } from "./rng";
-import { applyRoundIncome } from "./economy";
+import { applyRoundIncome, autoUpgradeIfPossible } from "./economy";
 import { rollShop } from "./shop";
 import { triggerForPlayer } from "./bus";
 import { pairPlayers } from "./matchmaking";
@@ -42,6 +42,7 @@ export function beginRound(state: GameState, rng: Rng): void {
       if (c) c.isFreeRefreshUsed = false;
     }
     triggerForPlayer(p, "turn_start");
+    autoUpgradeIfPossible(p); // 经验≥所需 → 自动连续升级（升级后再刷商店，吃新等级概率）
     rollShop(state, rng, p);
   }
 }

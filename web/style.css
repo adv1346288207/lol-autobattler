@@ -114,7 +114,15 @@ body {
   width: 100%; max-width: 92px; min-height: 96px; border-radius: 8px;
   background: #232738; border: 2px solid var(--border);
   padding: 4px 6px; display: flex; flex-direction: column; gap: 2px;
-  cursor: pointer; user-select: none; position: relative; flex-shrink: 0;
+  cursor: grab; user-select: none; position: relative; flex-shrink: 0;
+  touch-action: none; /* 拖动优先，防止滚动干扰 */
+}
+.card:active { cursor: grabbing; }
+
+.drag-ghost {
+  position: fixed; z-index: 300; pointer-events: none;
+  width: 92px; transform: translate(-50%, -50%) scale(1.06);
+  opacity: 0.88; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 .card:hover { filter: brightness(1.15); }
 .card.selected { outline: 2px solid var(--gold); }

@@ -53,7 +53,7 @@ export function renderTopbar(state: GameState): void {
   const info = el("div", "top-info");
   info.appendChild(el("span", "lv", `商店Lv${p.shopLevel}`));
   if (gap === null) {
-    info.appendChild(el("span", "exp-gap", " · 已满级"));
+    info.appendChild(el("span", "exp-gap", " · 已到最高级"));
   } else {
     info.appendChild(el("span", "exp-gap", ` · 距升级差 `));
     const b = el("b", undefined, `${gap} 经验`);
@@ -85,7 +85,7 @@ export function renderOppStrip(state: GameState): void {
   }
 }
 
-export function renderShop(state: GameState, onBuy: (idx: number) => void): void {
+export function renderShop(state: GameState, onCardDown: (idx: number, e: PointerEvent) => void): void {
   const box = document.getElementById("shop")!;
   box.replaceChildren();
   const p = state.players[0]!;
@@ -105,7 +105,7 @@ export function renderShop(state: GameState, onBuy: (idx: number) => void): void
       stats.appendChild(el("span", "hp", `血${config.hp}`));
       card.appendChild(stats);
       card.appendChild(el("div", "card-qual", `${QUALITY_LABEL[config.quality]}·${config.price}金`));
-      card.addEventListener("click", () => onBuy(i));
+      card.addEventListener("pointerdown", (e) => onCardDown(i, e));
       if (p.gold < config.price || p.hand.length >= shopConfig.handLimit) card.classList.add("disabled");
       slot.appendChild(card);
     }
@@ -134,14 +134,12 @@ export function renderShopButtons(
   btnRefresh.addEventListener("click", onRefresh);
   row.appendChild(btnRefresh);
 
-  // 右：升级（差多少经验 → 补多少金币）
+  // 右：升级（自动升级后经验恒小于所需，按钮永远显示"补差金币"）
   const gap = goldToUpgrade(p.shopLevel, p.exp);
   let btnUp: HTMLButtonElement;
   if (gap === null) {
-    btnUp = el("button", "btn btn-up", "已满级");
+    btnUp = el("button", "btn btn-up", "已到最高级");
     btnUp.disabled = true;
-  } else if (gap === 0) {
-    btnUp = el("button", "btn btn-up free", "升级商店（免费）");
   } else {
     btnUp = el("button", "btn btn-up", `升级商店（补 ${gap} 金币）`);
     btnUp.disabled = p.gold < gap;
@@ -153,28 +151,23 @@ export function renderShopButtons(
 
 export function renderBoard(
   state: GameState,
-  selectedUid: number | null,
-  onSlot: (pos: number) => void,
-  onSelect: (uid: number) => void,
+  onCardDown: (uid: number, e: PointerEvent) => void,
 ): void {
   const box = document.getElementById("board")!;
   box.replaceChildren();
   const grid = el("div", "board-grid");
   for (const pos of [1, 2, 3, 4, 5, 6]) {
     const slot = el("div", "board-slot");
+    slot.dataset.pos = String(pos);
     slot.appendChild(el("div", "slot-pos", `${pos}${pos <= 3 ? "前" : "后"}`));
     const c = state.players[0]!.board[pos - 1];
     if (c) {
-      const card = renderCard(c, c.uid === selectedUid ? "selected" : "");
-      card.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onSelect(c.uid);
-      });
+      const card = renderCard(c);
+      card.addEventListener("pointerdown", (e) => onCardDown(c.uid, e));
       slot.appendChild(card);
     } else {
       slot.appendChild(el("div", "slot-empty", "空"));
     }
-    slot.addEventListener("click", () => onSlot(pos));
     grid.appendChild(slot);
   }
   box.appendChild(grid);
@@ -182,10 +175,7 @@ export function renderBoard(
 
 export function renderHand(
   state: GameState,
-  selectedUid: number | null,
-  onSelect: (uid: number) => void,
-  onSell: (uid: number) => void,
-  onCancel: () => void,
+  onCardDown: (uid: number, e: PointerEvent) => void,
 ): void {
   const box = document.getElementById("hand")!;
   box.replaceChildren();
@@ -194,19 +184,9 @@ export function renderHand(
     box.appendChild(el("div", "empty-hint", `仓库（${p.hand.length}/${shopConfig.handLimit}）`));
   }
   for (const c of p.hand) {
-    const card = renderCard(c, c.uid === selectedUid ? "selected" : "");
-    card.addEventListener("click", () => onSelect(c.uid));
+    const card = renderCard(c);
+    card.addEventListener("pointerdown", (e) => onCardDown(c.uid, e));
     box.appendChild(card);
-  }
-  if (selectedUid !== null) {
-    const actions = el("div", "hand-actions");
-    const sell = el("button", "chip chip-sell", "出售");
-    sell.addEventListener("click", () => onSell(selectedUid));
-    actions.appendChild(sell);
-    const cancel = el("button", "chip", "取消");
-    cancel.addEventListener("click", onCancel);
-    actions.appendChild(cancel);
-    box.appendChild(actions);
   }
 }
 

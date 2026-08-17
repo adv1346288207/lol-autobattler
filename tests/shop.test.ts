@@ -162,10 +162,27 @@ describe("移动", () => {
     expect(p.board[3]!.position).toBe(4);
   });
 
+  it("场上卡 → position 0 回手牌", () => {
+    const { state, rng, p } = makeCtx();
+    const card = place(state, p, "lan", 2);
+    applyAction(state, rng, { type: "move", player: 0, cardUid: card.uid, position: 0 });
+    expect(p.board[1]).toBeNull();
+    expect(p.hand).toHaveLength(1);
+    expect(p.hand[0]!.uid).toBe(card.uid);
+    expect(p.hand[0]!.position).toBeNull();
+  });
+
+  it("手牌卡执行 position 0 抛错", () => {
+    const { state, rng, p } = makeCtx();
+    const card = giveHand(state, p, "lan");
+    expect(() => applyAction(state, rng, { type: "move", player: 0, cardUid: card.uid, position: 0 })).toThrow();
+    expect(p.hand).toHaveLength(1);
+  });
+
   it("非法位置抛错", () => {
     const { state, rng, p } = makeCtx();
     const card = giveHand(state, p, "lan");
     expect(() => applyAction(state, rng, { type: "move", player: 0, cardUid: card.uid, position: 7 })).toThrow();
-    expect(() => applyAction(state, rng, { type: "move", player: 0, cardUid: card.uid, position: 0 })).toThrow();
+    expect(() => applyAction(state, rng, { type: "move", player: 0, cardUid: card.uid, position: -1 })).toThrow();
   });
 });

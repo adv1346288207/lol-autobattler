@@ -25,7 +25,7 @@ export function renderShop(p: PlayerState): string {
   const lines: string[] = [];
   const upgradeCost = expToUpgrade(p.shopLevel);
   lines.push(
-    `商店Lv${p.shopLevel} | 金币 ${p.gold} | 经验 ${p.exp}${upgradeCost !== null ? `/${upgradeCost}` : "（满级）"} | 免费刷新 ${p.freeRefresh}`,
+    `商店Lv${p.shopLevel} | 金币 ${p.gold} | 经验 ${p.exp}${upgradeCost !== null ? `/${upgradeCost}（补${Math.max(0, upgradeCost - p.exp)}金升级）` : "（已到最高级）"} | 免费刷新 ${p.freeRefresh}`,
   );
   lines.push(
     "商店: " +

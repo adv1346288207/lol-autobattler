@@ -36,6 +36,11 @@ function assertInvariants(state: GameState): void {
     expect(p.shopLevel).toBeGreaterThanOrEqual(1);
     expect(p.shopLevel).toBeLessThanOrEqual(5);
     expect(p.hand.length).toBeLessThanOrEqual(15);
+    // 自动升级后经验恒小于下一级所需（满级除外）
+    if (p.shopLevel < 5) {
+      const cost = [0, 2, 8, 12, 16][p.shopLevel]!;
+      expect(p.exp).toBeLessThan(cost);
+    }
     expect(p.board).toHaveLength(6);
     const cards = [...p.hand, ...p.board.filter((x): x is NonNullable<typeof x> => x !== null)];
     expect(cards.length).toBeLessThanOrEqual(15 + 6);

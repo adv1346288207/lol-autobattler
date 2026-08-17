@@ -25,9 +25,25 @@ function economyGoldForRound(round: number): number {
 }
 
 /**
+ * 自动升级（用户机制 2026-08-17 修正）：经验 ≥ 所需时自动连续升级，
+ * 不经过按钮、不显示"免费升级"。回合开始时在收入/被动之后调用。
+ */
+export function autoUpgradeIfPossible(player: PlayerState): void {
+  let guard = 0;
+  for (;;) {
+    if (guard++ > 10) throw new Error("autoUpgrade: 升级次数异常");
+    const cost = expToUpgrade(player.shopLevel);
+    if (cost === null || player.exp < cost) return;
+    player.exp -= cost;
+    player.shopLevel += 1;
+    if (player.shopLevel > shopConfig.maxShopLevel) throw new Error("autoUpgrade: 超出等级上限");
+  }
+}
+
+/**
  * 升级商店（用户机制，2026-08-17）：
- * 差多少经验 → 一次性付多少金币（1经验=1金币）；经验 ≥ 所需则免费；
- * 经验多出的部分保留到下个等级
+ * 差多少经验 → 一次性付多少金币（1经验=1金币）；经验多出的部分保留到下个等级
+ * （自动升级后经验恒小于所需，按钮永远是"补差金币"）
  */
 export function upgradeShopAction(player: PlayerState): void {
   const cost = expToUpgrade(player.shopLevel);
