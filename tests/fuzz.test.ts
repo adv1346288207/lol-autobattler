@@ -10,7 +10,7 @@ function randomAction(state: GameState, rng: Rng): Action {
   const p = state.players[0]!;
   const allCards = [...p.hand, ...p.board.filter((c): c is NonNullable<typeof c> => c !== null)];
   const randomUid = allCards.length > 0 ? pick(rng, allCards).uid : 0;
-  const t = randInt(rng, 0, 6);
+  const t = randInt(rng, 0, 5);
   switch (t) {
     case 0:
       return { type: "buy", player: 0, shopIndex: randInt(rng, 0, 2) as 0 | 1 | 2 };
@@ -21,8 +21,6 @@ function randomAction(state: GameState, rng: Rng): Action {
     case 3:
       return { type: "upgradeShop", player: 0 };
     case 4:
-      return { type: "buyExp", player: 0 };
-    case 5:
       return { type: "move", player: 0, cardUid: randomUid, position: randInt(rng, 0, 7) };
     default:
       return { type: "endShop", player: 0 };

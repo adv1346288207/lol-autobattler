@@ -1,5 +1,5 @@
 /**
- * 经济逻辑（M1）：回合收入/买经验/升级商店
+ * 经济逻辑：回合收入/升级商店（金币一次性补经验差）
  * 校验失败直接抛错，调用方保证状态不被污染
  */
 import type { PlayerState } from "./state";
@@ -24,25 +24,22 @@ function economyGoldForRound(round: number): number {
   );
 }
 
-/** 买经验：2 金 = 1 经验 */
-export function buyExpAction(player: PlayerState): void {
-  if (player.gold < economyConfig.goldPerExp) {
-    throw new Error("buyExp: 金币不足");
-  }
-  player.gold -= economyConfig.goldPerExp;
-  player.exp += 1;
-}
-
-/** 升级商店：消耗经验，5 级满 */
+/**
+ * 升级商店（用户机制，2026-08-17）：
+ * 差多少经验 → 一次性付多少金币（1经验=1金币）；经验 ≥ 所需则免费；
+ * 经验多出的部分保留到下个等级
+ */
 export function upgradeShopAction(player: PlayerState): void {
   const cost = expToUpgrade(player.shopLevel);
   if (cost === null) {
     throw new Error("upgradeShop: 商店已满级");
   }
-  if (player.exp < cost) {
-    throw new Error(`upgradeShop: 经验不足（需 ${cost}，当前 ${player.exp}）`);
+  const goldPay = Math.max(0, cost - player.exp);
+  if (player.gold < goldPay) {
+    throw new Error(`upgradeShop: 金币不足（还差 ${goldPay} 金，当前 ${player.gold}）`);
   }
-  player.exp -= cost;
+  player.gold -= goldPay;
+  player.exp = Math.max(0, player.exp - cost);
   player.shopLevel += 1;
   if (player.shopLevel > shopConfig.maxShopLevel) throw new Error("upgradeShop: 超出等级上限");
 }

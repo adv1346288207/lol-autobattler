@@ -3,15 +3,12 @@
  * - 用 DFS 求"避开上回合对手"的完美匹配（n≥4 时必然存在；n=2 时允许重复）
  * - 全部决策走 seed RNG → 可回放
  */
-import type { GameState } from "./state";
+import type { GameState, Pairing } from "./state";
 import { alivePlayers } from "./state";
 import type { Rng } from "./rng";
 import { randInt } from "./rng";
 
-export interface Pairing {
-  a: number;
-  b: number | null; // null = 轮空
-}
+export type { Pairing };
 
 function shuffle<T>(arr: T[], rng: Rng): void {
   for (let i = arr.length - 1; i > 0; i--) {

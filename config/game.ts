@@ -5,6 +5,6 @@ export const gameConfig = {
   playerCount: 8,
   /** 回合上限：到 60 回合未分胜负 → 按血量从高到低排名 */
   maxRounds: 60,
-  /** 单场战斗行动步数上限（防死循环保护） */
-  maxBattleSteps: 100,
+  /** 单场战斗行动步数上限（用户确认 2026-08-17：3000 步） */
+  maxBattleSteps: 3000,
 } as const;

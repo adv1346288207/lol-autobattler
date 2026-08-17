@@ -5,9 +5,16 @@
  */
 import { createGame, type BattleEvent, type GameState, type PlayerState } from "../core/state";
 import { createRng, type Rng } from "../core/rng";
-import { beginRound, resolveRound } from "../core/phase";
+import { beginRound, prepareBattle, resolveBattle } from "../core/phase";
 import { applyAction, type Action } from "../core/actions";
 import { runBotTurn, createBot, type Bot } from "../bot/random";
+
+export interface TurnPreview {
+  /** 本回合对手（null=轮空） */
+  opponentId: number | null;
+  /** 玩家 0 是否先手（轮空时无意义） */
+  amFirst: boolean;
+}
 
 export class GameSession {
   readonly seed: number;
@@ -34,38 +41,53 @@ export class GameSession {
     return this.state.phase === "ended";
   }
 
-  /** 最近一回合的战斗日志（渲染层消费） */
+  /** 最近一次战斗的战斗日志（渲染层消费） */
   get battleLog(): BattleEvent[] {
     return this.lastBattleLog;
   }
 
-  /** 玩家操作（buy/sell/refresh/upgradeShop/buyExp/move）；非法操作抛错，由 UI 提示 */
+  /** 玩家操作（buy/sell/refresh/upgradeShop/move）；非法操作抛错，由 UI 提示 */
   act(action: Action): BattleEvent[] {
     return applyAction(this.state, this.rng, action);
   }
 
   /**
-   * 结束回合：玩家 endShop → 7 个 AI 行动 → 配对/战斗/结算 → 下一回合
-   * 返回本回合战斗日志；对局结束时返回终局日志
-   * 若玩家 0 已被淘汰：自动快进到终局（观战），返回剩余所有回合的日志
+   * 准备阶段：玩家 endShop → 7 个 AI 行动 → 配对
+   * 在开战前即可知道"对手是谁 + 谁先手"（a=先手）
    */
+  prepareTurn(): TurnPreview {
+    const p0 = this.state.players[0]!;
+    if (this.state.phase === "shop" && !p0.eliminated && !p0.shopDone) {
+      applyAction(this.state, this.rng, { type: "endShop", player: 0 });
+    }
+    for (const p of this.state.players) {
+      if (!p.eliminated && !p.shopDone) {
+        runBotTurn(this.state, this.rng, p.id, this.bots.get(p.id)!);
+      }
+    }
+    const pairs = prepareBattle(this.state, this.rng);
+    const mine = pairs.find((p) => p.a === 0 || p.b === 0);
+    if (!mine || mine.b === null) return { opponentId: null, amFirst: false };
+    return { opponentId: mine.a === 0 ? mine.b : mine.a, amFirst: mine.a === 0 };
+  }
+
+  /** 战斗阶段：按准备好的配对结算，返回本回合全部战斗日志 */
+  fightTurn(): BattleEvent[] {
+    const log = resolveBattle(this.state, this.rng);
+    this.lastBattleLog = log;
+    return log;
+  }
+
+  /** 组合流程（测试/AI 驱动用）：准备 + 战斗；玩家 0 出局后自动快进到终局 */
   endTurn(): BattleEvent[] {
     let log: BattleEvent[] = [];
     let guard = 0;
     for (;;) {
       if (guard++ >= 200) throw new Error("endTurn: 对局未在保护次数内结束");
-      const p0 = this.state.players[0]!;
-      if (this.state.phase === "shop" && !p0.eliminated && !p0.shopDone) {
-        applyAction(this.state, this.rng, { type: "endShop", player: 0 });
-      }
-      for (const p of this.state.players) {
-        if (!p.eliminated && !p.shopDone) {
-          runBotTurn(this.state, this.rng, p.id, this.bots.get(p.id)!);
-        }
-      }
-      log = log.concat(resolveRound(this.state, this.rng));
+      this.prepareTurn();
+      log = log.concat(this.fightTurn());
       if (this.state.phase === "ended") break;
-      if (!p0.eliminated) break; // 人类存活：一回合一轮，等待下一次交互
+      if (!this.state.players[0]!.eliminated) break; // 人类存活：一回合一轮，等待下一次交互
     }
     this.lastBattleLog = log;
     return log;

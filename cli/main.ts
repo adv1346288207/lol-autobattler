@@ -35,8 +35,7 @@ const HELP = `命令：
   buy <0|1|2>      购买商店槽位
   sell <uid>       出售手牌/场上卡
   refresh          刷新商店（1金）
-  up               升级商店（消耗经验）
-  buyexp           买经验（2金=1经验）
+  up               升级商店（差多少经验付多少金币，一次性）
   place <uid> <1~6> 上阵/换位
   end              结束商店阶段
   help / quit`;
@@ -54,8 +53,6 @@ function parseAction(input: string): Action | null {
       return { type: "refresh", player: 0 };
     case "up":
       return { type: "upgradeShop", player: 0 };
-    case "buyexp":
-      return { type: "buyExp", player: 0 };
     case "place":
       return Number.isInteger(n(a!)) && Number.isInteger(n(b!))
         ? { type: "move", player: 0, cardUid: n(a!), position: n(b!) }

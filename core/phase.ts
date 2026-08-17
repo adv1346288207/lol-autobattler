@@ -3,7 +3,7 @@
  * 阶段流转：shop → pair → battle → damage →（回合数+1）→ shop
  * M1：实现 beginRound（商店阶段开局）；pair/battle/damage 在 M2 接入
  */
-import type { BattleEvent, GameState, Phase } from "./state";
+import type { BattleEvent, GameState, Pairing, Phase } from "./state";
 import { alivePlayers } from "./state";
 import type { Rng } from "./rng";
 import { applyRoundIncome } from "./economy";
@@ -47,17 +47,28 @@ export function beginRound(state: GameState, rng: Rng): void {
 }
 
 /**
- * 完整回合流转（M2）：所有存活玩家结束商店阶段后调用
- * pair → battle → damage →（终局判定）→ 下一回合 shop
- * @returns 本回合战斗事件日志（beginRound 会在下一回合清空 state.battleLog，因此以返回值传递）
+ * 准备阶段：所有存活玩家结束商店阶段后调用，产出配对
+ * （Web 在此刻即可展示"对手是谁 + 先手后手"；a=先手、b=后手）
+ * @returns 本回合全部配对（含轮空）
  */
-export function resolveRound(state: GameState, rng: Rng): BattleEvent[] {
-  if (state.phase === "ended") return [];
-
+export function prepareBattle(state: GameState, rng: Rng): Pairing[] {
+  if (state.phase !== "shop") throw new Error(`prepareBattle: 当前阶段 ${state.phase}，应在商店阶段`);
   state.phase = "pair";
   const pairings = pairPlayers(state, rng);
+  state.pendingPairings = pairings;
+  return pairings;
+}
 
+/**
+ * 战斗阶段：按 pendingPairings 逐场结算 → 伤害 → 淘汰 → 终局判定 → 下一回合
+ * @returns 本回合战斗事件日志
+ */
+export function resolveBattle(state: GameState, rng: Rng): BattleEvent[] {
+  const pairings = state.pendingPairings;
+  if (!pairings) throw new Error("resolveBattle: 未准备配对（先调用 prepareBattle）");
+  state.pendingPairings = null;
   state.phase = "battle";
+
   const log: BattleEvent[] = [];
   for (const pair of pairings) {
     if (pair.b === null) continue; // 轮空不受伤
@@ -77,6 +88,14 @@ export function resolveRound(state: GameState, rng: Rng): BattleEvent[] {
   state.phase = "shop";
   beginRound(state, rng); // 新回合：清空 battleLog
   return log;
+}
+
+/**
+ * 完整回合流转（CLI/AI 测试用）：prepareBattle + resolveBattle 一气呵成
+ */
+export function resolveRound(state: GameState, rng: Rng): BattleEvent[] {
+  prepareBattle(state, rng);
+  return resolveBattle(state, rng);
 }
 
 /** 终局结算：最后 1 人第 1 名；回合上限强制结算按血量降序排剩余名次 */

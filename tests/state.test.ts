@@ -73,11 +73,11 @@ describe("金币阶梯（用户确认：R1=2、前10回合+1、之后+2、封顶
 });
 
 describe("经验升级", () => {
-  it("升级消耗表：1→2 需 2、4→5 需 8、5 级满", () => {
+  it("升级需求表：1→2 需 2、2→3 需 8（用户举例）、5 级满", () => {
     expect(expToUpgrade(1)).toBe(2);
-    expect(expToUpgrade(2)).toBe(4);
-    expect(expToUpgrade(3)).toBe(6);
-    expect(expToUpgrade(4)).toBe(8);
+    expect(expToUpgrade(2)).toBe(8);
+    expect(expToUpgrade(3)).toBe(12); // 占位，待用户确认
+    expect(expToUpgrade(4)).toBe(16); // 占位，待用户确认
     expect(expToUpgrade(5)).toBeNull();
   });
 });

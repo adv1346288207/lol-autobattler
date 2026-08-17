@@ -5,7 +5,7 @@
  * - 重要：战斗在双方棋盘【快照副本】上进行，不污染场上卡牌血量
  * - 产出事件日志（渲染层/回放消费）；BATTLE_END 携带胜方存活卡（平局带双方）
  */
-import type { BattleEvent, CardInstance, GameState } from "./state";
+import type { BattleEvent, BattleUnitSnapshot, CardInstance, GameState } from "./state";
 import { gameConfig } from "../config/game";
 
 function frontmostAlive(board: (CardInstance | null)[]): CardInstance | null {
@@ -40,13 +40,28 @@ function endEvent(
   return { type: "BATTLE_END", winner, survivors: surv };
 }
 
+function snapshotOf(board: (CardInstance | null)[]): BattleUnitSnapshot[] {
+  return board
+    .filter((c): c is CardInstance => c !== null)
+    .map((c) => ({
+      uid: c.uid,
+      configId: c.configId,
+      level: c.level,
+      atk: c.atk,
+      hp: c.hp,
+      position: c.position ?? 0,
+    }));
+}
+
 export function simulateBattle(state: GameState, aId: number, bId: number): BattleEvent[] {
   const pa = state.players[aId]!;
   const pb = state.players[bId]!;
   // 快照副本：战斗中的血量变化不影响真实场上卡牌（每场战斗满血开打）
   const boardA = pa.board.map((c) => (c ? { ...c } : null));
   const boardB = pb.board.map((c) => (c ? { ...c } : null));
-  const events: BattleEvent[] = [{ type: "BATTLE_START", a: aId, b: bId }];
+  const events: BattleEvent[] = [
+    { type: "BATTLE_START", a: aId, b: bId, boards: { a: snapshotOf(boardA), b: snapshotOf(boardB) } },
+  ];
 
   let steps = 0;
   let pos = 1;

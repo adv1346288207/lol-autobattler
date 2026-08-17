@@ -60,14 +60,36 @@ export interface GameState {
   seed: number;
   nextUid: number; // 卡牌实例 UID 分配器
   lastOpponent: (number | null)[]; // 各玩家上一回合对手（配对时避免重复；轮空为 null）
+  pendingPairings: Pairing[] | null; // 准备阶段产出的配对（战斗结算前有效）
   battleLog: BattleEvent[]; // 战斗事件日志（渲染层/回放消费）
   version: string; // 规则版本号
 }
 
-export const RULES_VERSION = "0.4";
+export const RULES_VERSION = "0.5";
+
+/** 一轮对战的配对（b=null 为轮空） */
+export interface Pairing {
+  a: number; // 先手方
+  b: number | null; // 后手方（null=轮空）
+}
+
+/** 战斗开局时双方棋盘快照（战斗展示/回放用） */
+export interface BattleUnitSnapshot {
+  uid: number;
+  configId: string;
+  level: 1 | 2;
+  atk: number;
+  hp: number;
+  position: number;
+}
 
 export type BattleEvent =
-  | { type: "BATTLE_START"; a: number; b: number }
+  | {
+      type: "BATTLE_START";
+      a: number;
+      b: number;
+      boards: { a: BattleUnitSnapshot[]; b: BattleUnitSnapshot[] };
+    }
   | { type: "ATTACK"; from: number; to: number; dmg: number }
   | { type: "DEATH"; who: number }
   | { type: "COMBINE"; cardUid: number; configId: string } // 三合一（购买阶段事件）
@@ -97,6 +119,7 @@ export function createGame(seed: number): GameState {
     seed,
     nextUid: 1,
     lastOpponent: Array<number | null>(gameConfig.playerCount).fill(null),
+    pendingPairings: null,
     battleLog: [],
     version: RULES_VERSION,
   };

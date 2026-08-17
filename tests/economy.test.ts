@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeCtx, place } from "./helpers";
 import { beginRound } from "../core/phase";
-import { buyExpAction, upgradeShopAction } from "../core/economy";
+import { upgradeShopAction } from "../core/economy";
 import { createCardInstance } from "../core/state";
 
 describe("回合收入（金币阶梯 + 自动经验）", () => {
@@ -75,33 +75,61 @@ describe("回合收入（金币阶梯 + 自动经验）", () => {
   });
 });
 
-describe("买经验 / 升级商店", () => {
-  it("2 金 = 1 经验；金币不足抛错", () => {
+describe("升级商店（金币一次性补经验差，2026-08-17 机制）", () => {
+  it("差 2 经验 → 付 2 金币升级（1→2 需 2 经验）", () => {
     const { p } = makeCtx();
     p.gold = 5;
-    buyExpAction(p);
-    expect(p.gold).toBe(3);
-    expect(p.exp).toBe(1);
-    p.gold = 1;
-    expect(() => buyExpAction(p)).toThrow();
-    expect(p.exp).toBe(1); // 状态未污染
-  });
-
-  it("升级消耗：1→2 需 2 经验；经验不足抛错", () => {
-    const { p } = makeCtx();
-    p.exp = 2;
+    p.exp = 0;
     upgradeShopAction(p);
     expect(p.shopLevel).toBe(2);
+    expect(p.gold).toBe(3); // 一次性补 2 金
     expect(p.exp).toBe(0);
-    p.exp = 3;
-    expect(() => upgradeShopAction(p)).toThrow(); // 2→3 需 4
+  });
+
+  it("已有 1 经验 → 只补 1 金币", () => {
+    const { p } = makeCtx();
+    p.gold = 5;
+    p.exp = 1;
+    upgradeShopAction(p);
     expect(p.shopLevel).toBe(2);
+    expect(p.gold).toBe(4);
+    expect(p.exp).toBe(0);
+  });
+
+  it("经验 ≥ 所需 → 免费升级，多余经验保留", () => {
+    const { p } = makeCtx();
+    p.gold = 0;
+    p.exp = 5; // 1→2 需 2，剩余 3
+    upgradeShopAction(p);
+    expect(p.shopLevel).toBe(2);
+    expect(p.gold).toBe(0);
+    expect(p.exp).toBe(3);
+  });
+
+  it("2→3 需 8 经验：差 8 经验 → 付 8 金币（用户举例）", () => {
+    const { p } = makeCtx();
+    p.shopLevel = 2;
+    p.gold = 10;
+    p.exp = 0;
+    upgradeShopAction(p);
+    expect(p.shopLevel).toBe(3);
+    expect(p.gold).toBe(2);
+  });
+
+  it("金币不足以补差 → 抛错且状态不变", () => {
+    const { p } = makeCtx();
+    p.gold = 1;
+    p.exp = 0; // 差 2 金
+    const snapshot = JSON.stringify(p);
+    expect(() => upgradeShopAction(p)).toThrow();
+    expect(JSON.stringify(p)).toBe(snapshot);
   });
 
   it("5 级满级后升级抛错", () => {
     const { p } = makeCtx();
     p.shopLevel = 5;
     p.exp = 99;
+    p.gold = 99;
     expect(() => upgradeShopAction(p)).toThrow();
   });
 });

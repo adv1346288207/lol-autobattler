@@ -43,6 +43,35 @@ describe("Web 对局会话（GameSession）", () => {
     }
   });
 
+  it("prepareTurn 开战前给出对手与先手后手；fightTurn 结算", () => {
+    const s = new GameSession(7);
+    const preview = s.prepareTurn();
+    // 8 人存活时必有对手（不可能轮空）
+    expect(preview.opponentId).not.toBeNull();
+    expect(preview.opponentId).toBeGreaterThanOrEqual(1);
+    expect(typeof preview.amFirst).toBe("boolean");
+    // 战斗前可查询，战斗后进入下一回合
+    const log = s.fightTurn();
+    expect(log.some((e) => e.type === "BATTLE_START")).toBe(true);
+    if (!s.isOver) expect(s.state.phase).toBe("shop");
+  });
+
+  it("BATTLE_START 携带双方棋盘快照（战斗展示数据源）", () => {
+    const s = new GameSession(7);
+    // 给自己上阵一张卡
+    const card = s.player.hand[0];
+    if (card) s.act({ type: "move", player: 0, cardUid: card.uid, position: 1 });
+    const log = s.endTurn();
+    const start = log.find((e): e is Extract<typeof e, { type: "BATTLE_START" }> => e.type === "BATTLE_START");
+    expect(start).toBeDefined();
+    if (start) {
+      expect(start.boards.a.length).toBeGreaterThanOrEqual(0);
+      expect(start.boards.b.length).toBeGreaterThanOrEqual(0);
+      const mine = [...start.boards.a, ...start.boards.b].find((u) => u.uid === card?.uid);
+      expect(mine?.configId).toBe(card?.configId);
+    }
+  });
+
   it("整局可玩完（人类只按结束回合）：名次完整", () => {
     const s = new GameSession(7);
     let guard = 0;

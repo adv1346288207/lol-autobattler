@@ -38,9 +38,9 @@ export function createBot(seed: number, playerId: number): Bot {
     decide(state: GameState, pid: number): Action {
       const p = state.players[pid]!;
 
-      // 1. 经验够就升级
+      // 1. 升级：差多少经验付多少金币，付得起就升
       const cost = expToUpgrade(p.shopLevel);
-      if (cost !== null && p.exp >= cost) {
+      if (cost !== null && p.gold >= Math.max(0, cost - p.exp)) {
         return { type: "upgradeShop", player: pid };
       }
 

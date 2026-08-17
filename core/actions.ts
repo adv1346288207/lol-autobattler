@@ -8,7 +8,7 @@ import { createCardInstance } from "./state";
 import type { Rng } from "./rng";
 import { CARD_BY_ID } from "../config/cards";
 import { shopConfig } from "../config/shop";
-import { buyExpAction, upgradeShopAction } from "./economy";
+import { upgradeShopAction } from "./economy";
 import { refreshShop, rollShop, sellCard } from "./shop";
 import { runCombineChecks } from "./combine";
 
@@ -17,7 +17,6 @@ export type Action =
   | { type: "sell"; player: number; cardUid: number }
   | { type: "refresh"; player: number }
   | { type: "upgradeShop"; player: number }
-  | { type: "buyExp"; player: number }
   | { type: "move"; player: number; cardUid: number; position: number }
   | { type: "endShop"; player: number };
 
@@ -26,7 +25,6 @@ export const ACTION_TYPES: Action["type"][] = [
   "sell",
   "refresh",
   "upgradeShop",
-  "buyExp",
   "move",
   "endShop",
 ];
@@ -72,11 +70,6 @@ export function applyAction(state: GameState, rng: Rng, action: Action): BattleE
 
     case "upgradeShop": {
       upgradeShopAction(p);
-      return [];
-    }
-
-    case "buyExp": {
-      buyExpAction(p);
       return [];
     }
 
