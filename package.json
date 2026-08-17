@@ -1,0 +1,18 @@
+{
+  "name": "uucard-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "悠悠牌同款：8人自动战斗卡牌 MVP（核心模拟器 + CLI）",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sim": "tsx cli/main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
