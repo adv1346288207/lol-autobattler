@@ -11,5 +11,5 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["core", "config", "bot", "cli", "tests"]
+  "include": ["core", "config", "bot", "cli", "web", "tests", "vite.config.ts"]
 }

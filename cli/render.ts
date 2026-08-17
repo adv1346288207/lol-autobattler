@@ -2,7 +2,7 @@
  * 文本渲染器（M3）：只读 GameState 输出可读文本，零逻辑
  * 将来图形 UI 替换本层
  */
-import type { GameState, PlayerState, CardInstance } from "../core/state";
+import type { BattleEvent, GameState, PlayerState, CardInstance } from "../core/state";
 import { alivePlayers } from "../core/state";
 import { CARD_BY_ID } from "../config/cards";
 import { expToUpgrade } from "../config/economy";
@@ -58,10 +58,8 @@ export function renderScoreboard(state: GameState): string {
   return lines.join("\n");
 }
 
-export function renderBattleLog(state: GameState): string {
+export function renderBattleLog(log: BattleEvent[], state: GameState): string {
   const lines: string[] = ["── 本回合战斗 ──"];
-  let currentA = -1;
-  let currentB = -1;
   const name = (uid: number) => {
     for (const p of state.players) {
       const c = p.board.find((x) => x !== null && x.uid === uid);
@@ -71,11 +69,9 @@ export function renderBattleLog(state: GameState): string {
     }
     return `#${uid}`;
   };
-  for (const e of state.battleLog) {
+  for (const e of log) {
     switch (e.type) {
       case "BATTLE_START":
-        currentA = e.a;
-        currentB = e.b;
         lines.push(`玩家${e.a} vs 玩家${e.b}:`);
         break;
       case "ATTACK":
@@ -95,8 +91,6 @@ export function renderBattleLog(state: GameState): string {
         lines.push(`  ✨ 三合一：${CARD_BY_ID.get(e.configId)!.name} 金卡`);
         break;
     }
-    void currentA;
-    void currentB;
   }
   return lines.join("\n");
 }

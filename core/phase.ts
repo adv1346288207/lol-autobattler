@@ -3,7 +3,7 @@
  * 阶段流转：shop → pair → battle → damage →（回合数+1）→ shop
  * M1：实现 beginRound（商店阶段开局）；pair/battle/damage 在 M2 接入
  */
-import type { GameState, Phase } from "./state";
+import type { BattleEvent, GameState, Phase } from "./state";
 import { alivePlayers } from "./state";
 import type { Rng } from "./rng";
 import { applyRoundIncome } from "./economy";
@@ -49,31 +49,34 @@ export function beginRound(state: GameState, rng: Rng): void {
 /**
  * 完整回合流转（M2）：所有存活玩家结束商店阶段后调用
  * pair → battle → damage →（终局判定）→ 下一回合 shop
+ * @returns 本回合战斗事件日志（beginRound 会在下一回合清空 state.battleLog，因此以返回值传递）
  */
-export function resolveRound(state: GameState, rng: Rng): void {
-  if (state.phase === "ended") return;
+export function resolveRound(state: GameState, rng: Rng): BattleEvent[] {
+  if (state.phase === "ended") return [];
 
   state.phase = "pair";
   const pairings = pairPlayers(state, rng);
 
   state.phase = "battle";
-  state.battleLog = [];
+  const log: BattleEvent[] = [];
   for (const pair of pairings) {
     if (pair.b === null) continue; // 轮空不受伤
     const events = simulateBattle(state, pair.a, pair.b);
-    state.battleLog.push(...events);
+    log.push(...events);
     applyBattleResult(state, pair.a, pair.b, events);
   }
+  state.battleLog = log;
 
   state.phase = "damage";
   const alive = alivePlayers(state);
   if (alive.length <= 1 || state.round >= gameConfig.maxRounds) {
     endGame(state);
-    return;
+    return log;
   }
   state.round += 1;
   state.phase = "shop";
-  beginRound(state, rng);
+  beginRound(state, rng); // 新回合：清空 battleLog
+  return log;
 }
 
 /** 终局结算：最后 1 人第 1 名；回合上限强制结算按血量降序排剩余名次 */

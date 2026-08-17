@@ -110,12 +110,12 @@ async function interactive(seed: number) {
         if (!p2.eliminated && !p2.shopDone) runBotTurn(state, rng, p2.id, bots.get(p2.id)!);
       }
     }
-    resolveRound(state, rng);
+    const log = resolveRound(state, rng);
     if (state.phase === "ended") {
       console.log(renderFinal(state));
       break;
     }
-    console.log(renderBattleLog(state));
+    console.log(renderBattleLog(log, state));
   }
   rl.close();
 }
