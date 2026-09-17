@@ -12,7 +12,7 @@
 | 线上地址 | **https://adv1346288207.github.io/lol-autobattler/** |
 | 仓库 | https://github.com/adv1346288207/lol-autobattler （public） |
 | 分支 | `master` |
-| 流水线 | push → 取素材 → 校验 → 测试 → 构建 → 发布 Pages |
+| 流水线 | push → 校验素材在库 → 测试 → 构建 → 发布 Pages |
 
 **以后只要 `git push` 就会自动重新发布**，不用做别的。
 
@@ -67,8 +67,8 @@ gh repo create lol-autobattler --public --source=. --remote=origin --push
 ```
 
 - `--public`：**免费账号的 Pages 只能用于公开仓库**；有 GitHub Pro 的话可以换 `--private`。
-- 仓库里只有代码，**没有 Riot 的立绘素材**（那些被 `.gitignore` 排除，构建时现拉），
-  所以公开仓库不涉及素材版权外传。
+- 素材（53 张图约 1.6 MB）**已随仓库提交**，构建不再依赖 Data Dragon，
+  clone 下来不联网也能构建。版权注意事项见 `web/public/assets/lol/README.md`。
 
 ### 3. 打开 Pages
 
@@ -88,8 +88,7 @@ git push
 推上去后 Actions 会自动：
 
 1. `npm ci`
-2. `npm run assets:lol` —— 从 Riot Data Dragon 现拉 20 立绘 + 20 头像 + 13 武器图标
-3. `npm run assets:check` —— 数量不对就直接失败，**不会把"没图版"发上线**
+2. `npm run assets:check` —— 校验 53 张图都在库里，漏提交就直接失败，**不会把"没图版"发上线**
 4. `npm test` —— 282 个测试全过才继续
 5. `npm run web:build`
 6. 发布到 Pages
@@ -136,7 +135,7 @@ npm run play -- --url https://adv1346288207.github.io/lol-autobattler --rounds 3
 
 | 平台 | 方式 |
 |---|---|
-| Cloudflare Pages | 构建命令 `npm run web:build`，输出目录 `dist`，**需要加一步取素材**（Build command 改成 `npm run assets:lol && npm run web:build`） |
+| Cloudflare Pages | 构建命令 `npm run web:build`，输出目录 `dist`（素材已在库里，无需额外步骤） |
 | Netlify / Vercel | 同上 |
 | 自己的服务器 | 把 `dist/` 丢进任意 Web 根目录 |
 | 局域网给手机试玩 | `npm run web`（已监听 0.0.0.0），手机开 `http://<电脑IP>:5173` |

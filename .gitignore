@@ -3,10 +3,9 @@ dist/
 *.log
 .DS_Store
 
-# 下载的 Riot Data Dragon 二进制资源（清单与说明仍可跟踪）
-web/public/assets/lol/champions/*.png
-web/public/assets/lol/portraits/*.jpg
-web/public/assets/lol/items/*.png
+# Data Dragon 资源：champions / portraits / items 已入库（共 55 个文件约 1.6 MB），
+# 这样 clone 下来不用联网就能构建，部署也不依赖 Data Dragon 是否可用。
+# 体积更大的 splashes / spells 目前没用到，先不入库；要加的话删掉下面两行并跑 npm run assets:lol。
 web/public/assets/lol/splashes/
 web/public/assets/lol/spells/
 

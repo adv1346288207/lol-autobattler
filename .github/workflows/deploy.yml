@@ -28,12 +28,9 @@ jobs:
 
       - run: npm ci
 
-      # 立绘/头像是 Riot Data Dragon 的官方图，按 .gitignore 刻意不入库，
-      # 所以每次构建前现拉（这样仓库里只有代码，没有版权素材）
-      - name: Fetch LoL assets
-        run: npm run assets:lol
-
-      - name: Verify assets downloaded
+      # 素材已经入库（web/public/assets/lol/），构建不再需要联网取图。
+      # 这一步只是防止有人漏提交图片，导致线上变成占位字。
+      - name: Verify assets committed
         run: npm run assets:check
 
       - name: Test

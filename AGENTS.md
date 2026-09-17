@@ -41,8 +41,8 @@ TypeScript + Vite + Vitest 项目。**LoL 改编 + 第二轮优化 + 手机竖�
 
 - **https://adv1346288207.github.io/lol-autobattler/** ← `git push` 就会自动重新发布
 - 仓库：https://github.com/adv1346288207/lol-autobattler （public）
-- 流水线 `.github/workflows/deploy.yml`：取 Data Dragon 素材 → 校验 → `npm test` → 构建 → 发布 Pages
-- **素材不入库**（`.gitignore` 排除），CI 里现拉，所以公开仓库只有代码、没有 Riot 版权图
+- 流水线 `.github/workflows/deploy.yml`：校验素材在库 → `npm test` → 构建 → 发布 Pages
+- **素材已入库**（53 个文件约 1.6 MB），构建自包含、CI 不需要联网取图；`splashes/`/`spells/` 仍不入库
 - `vite.config.ts` 的 `base` 默认 `"./"`，`web/ui.ts` 的 `assetUrl()` 补 `BASE_URL`，
   所以同一份产物放在 `/<repo>/` 子路径下也能用（这是部署前必须修的坑，否则 55 张图全 404）
 - Pages 站点**需要手动开一次**（`GITHUB_TOKEN` 没权限建站点）：
@@ -216,7 +216,7 @@ npm run web:build
 - 平衡方法：`npm run sim -- --batch 1000` 会输出每个英雄/羁绊的"前四率 lift"；调优时**只改有数据支持的项**。
   昂贵羁绊（法师/刺客）的 lift 天然偏高，因为只有打到 4/5 级商店的玩家才凑得出来，属于选择偏差，不要据此削弱。
 - 资产：`npm run assets:lol` 下载 20 张方形头像 + 20 张卡面立绘（loading 竖版图，UI 卡牌正面），
-  清单见 `web/public/assets/lol/manifest.json`，二进制按 `.gitignore` 不入库，说明见同目录 `README.md`。
+  清单见 `web/public/assets/lol/manifest.json`，**图片已入库**（构建自包含），说明与版权注意事项见同目录 `README.md`。
 - **武器 = 装备（不是上阵单位）**：进商店买卖、3 张同名合成二星，然后**装备到英雄身上**（每名英雄 **2 格**，装满后自动替换较弱的一件）。
   `CardInstance.atk/hp` 只存英雄自身数值，武器放 `CardInstance.equips`，面板数值一律用
   `totalAtk()/totalHp()` 读取；武器库存是 `PlayerState.weapons`（上限 8）。

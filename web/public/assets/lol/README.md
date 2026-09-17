@@ -6,7 +6,7 @@
 > **未获 Riot Games 背书、赞助或授权**。LoL、League of Legends、Riot Games 及相关英雄名称、
 > 称号、图标、立绘与其它资产均为其各自权利人的商标或版权财产。
 >
-> 本目录下的二进制资源仅在本机开发调试时通过官方公开 CDN 拉取，**不提交进 Git**。
+> 本目录下的二进制资源通过官方公开 CDN 拉取，并**已随仓库一起分发**（见文末「关于素材入库」）。
 > 在**公开发布、分发或任何形式的商业化**之前，必须先重新核对 Riot 的开发者政策与法务页面
 > （Riot Developer Policy、Riot Legal / Terms of Service、以及面向第三方产品的资产使用条款），
 > 确认当前用法是否被允许；若不被允许，需替换为原创素材或取得正式授权。
@@ -62,12 +62,12 @@ node scripts/fetch-lol-assets.mjs --spells            # 额外下载技能图标
 
 ```
 web/public/assets/lol/
-├── manifest.json          # 清单（跟踪进 Git）
-├── README.md              # 本文件（跟踪进 Git）
-├── champions/<Id>.png     # 20 张方形头像（忽略，不入库）
-├── portraits/<Id>.jpg     # 20 张卡面立绘（忽略，不入库；UI 卡牌正面）
-├── splashes/<Id>_0.jpg    # 可选大尺寸原画（忽略，不入库）
-└── spells/<file>          # 可选技能图标（忽略，不入库）
+├── manifest.json          # 清单
+├── README.md              # 本文件
+├── champions/<Id>.png     # 20 张方形头像（已入库）
+├── portraits/<Id>.jpg     # 20 张卡面立绘（已入库；UI 卡牌正面）
+├── splashes/<Id>_0.jpg    # 可选大尺寸原画（未入库，体积大且目前用不到）
+└── spells/<file>          # 可选技能图标（未入库，同上）
 ```
 
 `web/public` 是 Vite 的静态资源目录（vite root 为 `web`），构建时会原样拷贝到 `dist`。
@@ -116,14 +116,24 @@ web/public/assets/lol/
 初始提交的清单 `assets` 为空对象，**不预置任何假的 sha256 或 `bytes: 0`**；
 真实哈希与字节数一律由下载脚本在成功写入后填写。
 
-## 为什么二进制资源不提交进 Git
+## 关于素材入库
 
-- **版权与许可**：这些美术资产的权利属于 Riot Games，不适合随源码仓库分发；
-  仓库里只保留「来源 + 版本 + 哈希」的清单，等价于一份可复现的下载配方。
-- **体积**：PNG/JPG 属于大体积二进制，反复提交会持续膨胀仓库历史且难以清理
-  （20 张立绘约 1 MB，20 张大尺寸原画可达数 MB）。
-- **可复现**：清单里的 `dataDragonVersion` + `sha256` 足以让任何人按需重新拉到同一份内容，
-  并校验下载结果是否被篡改或损坏。
+`champions/`（20 张方形头像，549 KB）、`portraits/`（20 张立绘，982 KB）、`items/`（13 张装备图标，77 KB）
+**已随仓库一起提交**，合计 53 个文件约 1.6 MB。这样做的原因：
 
-因此 `.gitignore` 忽略 `champions/*.png`、`portraits/*.jpg`、`splashes/`、`spells/`，
-而 `manifest.json` 与 `README.md` 保持可跟踪。
+- **构建自包含**：`git clone` 下来不联网就能 `npm run web:build`，不用先跑一遍下载脚本。
+- **部署不依赖上游**：CI 不再需要访问 Data Dragon，上游超时、限流、版本变更都不会影响发布。
+- **体积可接受**：单文件最大 62 KB，总量 1.6 MB，不会明显膨胀仓库历史。
+- `splashes/` 与 `spells/` 目前没用到且体积大得多，仍然不入库。
+
+**需要知道的风险**：这些美术资产的权利属于 Riot Games，
+把它们放进**公开仓库**意味着任何人 clone / fork 都会一并分发这些图片。
+本项目定位是本地个人非商业粉丝原型，仓库与线上站点本来就是公开的、并且同样在提供这些图片；
+但如果将来要做成商业产品、或收到权利人的下架要求，
+**必须**把它们从仓库历史中移除（`git filter-repo`）并替换为原创素材。
+
+保留 `manifest.json`（来源 URL + 版本 + sha256）的意义仍然成立：
+它是一份可复现的下载配方，随时能重新拉取并校验内容是否被篡改或损坏。
+
+想恢复成"不入库"：把 `.gitignore` 里的三行取消注释，然后
+`git rm -r --cached web/public/assets/lol/{champions,portraits,items}` 即可。
