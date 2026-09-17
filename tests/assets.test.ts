@@ -3,6 +3,7 @@
  * ── 只读校验：不联网、不下载；图片缺失时跳过而不是失败 ──
  * ── scripts/ 不在 tsconfig include 内，这里用 await import() + 本地类型声明接入 ──
  */
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -245,12 +246,26 @@ describe("manifest.json 条目完整性", () => {
 describe(".gitignore 资源规则", () => {
   const gitignore = readFileSync(GITIGNORE_PATH, "utf8");
 
-  it("忽略下载的二进制资源，但保留清单与说明", () => {
-    expect(gitignore).toContain("web/public/assets/lol/champions/*.png");
-    expect(gitignore).toContain("web/public/assets/lol/portraits/*.jpg");
+  it("champions/portraits/items 已入库（构建自包含），只忽略体积大的 splashes/spells", () => {
+    // 策略变更：53 张实际用到的图（约 1.6 MB）随仓库分发，clone 后不联网即可构建。
+    expect(gitignore).not.toContain("web/public/assets/lol/champions/*.png");
+    expect(gitignore).not.toContain("web/public/assets/lol/portraits/*.jpg");
+    expect(gitignore).not.toContain("web/public/assets/lol/items/*.png");
+    // 没用到且体积大得多的两类仍然不入库
     expect(gitignore).toContain("web/public/assets/lol/splashes/");
     expect(gitignore).toContain("web/public/assets/lol/spells/");
     expect(gitignore).not.toContain("web/public/assets/lol/manifest.json");
     expect(gitignore).not.toContain("web/public/assets/lol/README.md");
+  });
+
+  it("实际用到的图片确实被 git 跟踪（否则 CI 会发出没图的版本）", () => {
+    // 光「.gitignore 放开了」不够，得确认真的提交进去了
+    const tracked = execFileSync("git", ["ls-files", "web/public/assets/lol"], {
+      cwd: PROJECT_ROOT,
+      encoding: "utf8",
+    })
+      .split("\n")
+      .filter((l) => /\.(png|jpg)$/.test(l));
+    expect(tracked.length).toBeGreaterThanOrEqual(53);
   });
 });
