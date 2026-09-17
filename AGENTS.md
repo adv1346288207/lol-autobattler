@@ -37,6 +37,19 @@ TypeScript + Vite + Vitest 项目。**LoL 改编 + 第二轮优化 + 手机竖�
 
 改造前的原始基线（供对照）：12 个测试文件、91 个测试通过。旧卡（`loey/lan/longye/fenliezhe` 等）保留在 `config/cards.ts` 的 `LEGACY_CARDS`，不进商店。
 
+## 已部署（线上可玩）
+
+- **https://adv1346288207.github.io/lol-autobattler/** ← `git push` 就会自动重新发布
+- 仓库：https://github.com/adv1346288207/lol-autobattler （public）
+- 流水线 `.github/workflows/deploy.yml`：取 Data Dragon 素材 → 校验 → `npm test` → 构建 → 发布 Pages
+- **素材不入库**（`.gitignore` 排除），CI 里现拉，所以公开仓库只有代码、没有 Riot 版权图
+- `vite.config.ts` 的 `base` 默认 `"./"`，`web/ui.ts` 的 `assetUrl()` 补 `BASE_URL`，
+  所以同一份产物放在 `/<repo>/` 子路径下也能用（这是部署前必须修的坑，否则 55 张图全 404）
+- Pages 站点**需要手动开一次**（`GITHUB_TOKEN` 没权限建站点）：
+  `gh api -X POST repos/<user>/<repo>/pages -f build_type=workflow`
+- 验证线上是否真的能玩：
+  `npm run play -- --url https://adv1346288207.github.io/lol-autobattler --rounds 3`
+  （脚本会把任何 4xx/5xx 报出来，所以能证明线上素材真的加载成功）
 ## 自己玩一局（自走自检，重要）
 
 不要只靠代码感觉改 UI。用 Playwright 驱动真实浏览器自己玩：

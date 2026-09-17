@@ -31,8 +31,12 @@ const OUT = path.resolve(argOf("out", "shots"));
 const SEED = argOf("seed", "");
 const HEADLESS = !args.includes("--head");
 // --path 用来模拟子路径部署（GitHub Pages 的 /<repo>/）
+// --url  直接测一个完整地址（例如线上 Pages），不用起本地服务
 const SUBPATH = argOf("path", "").replace(/^\/+|\/+$/g, "");
-const BASE = `http://localhost:${PORT}/${SUBPATH ? `${SUBPATH}/` : ""}${SEED ? `?seed=${SEED}` : ""}`;
+const EXPLICIT_URL = argOf("url", "").replace(/\/+$/, "");
+const BASE = EXPLICIT_URL
+  ? `${EXPLICIT_URL}/${SEED ? `?seed=${SEED}` : ""}`
+  : `http://localhost:${PORT}/${SUBPATH ? `${SUBPATH}/` : ""}${SEED ? `?seed=${SEED}` : ""}`;
 
 const CHROME_CANDIDATES = [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",

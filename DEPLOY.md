@@ -5,6 +5,36 @@
 
 ---
 
+## ✅ 已经部署好了
+
+| | |
+|---|---|
+| 线上地址 | **https://adv1346288207.github.io/lol-autobattler/** |
+| 仓库 | https://github.com/adv1346288207/lol-autobattler （public） |
+| 分支 | `master` |
+| 流水线 | push → 取素材 → 校验 → 测试 → 构建 → 发布 Pages |
+
+**以后只要 `git push` 就会自动重新发布**，不用做别的。
+
+### 踩过的坑：Pages 站点要手动开一次
+
+工作流里的 `actions/configure-pages@v5` 带 `enablement: true`，
+但 **`GITHUB_TOKEN` 没有创建 Pages 站点的权限**，第一次会失败：
+
+```
+X Create Pages site failed. Error: Resource not accessible by integration
+```
+
+用 OAuth token 手动开一次就好（只需一次）：
+
+```powershell
+gh api -X POST repos/<用户名>/<仓库名>/pages -f build_type=workflow
+```
+
+之后再跑就一路绿了。
+
+---
+
 ## 为什么不能放 Supabase
 
 实测过：Supabase Storage 把 HTML 当普通文本返回，浏览器不会渲染。
@@ -89,8 +119,14 @@ npm run serve:dist          # http://localhost:4191/lol-autobattler/
 npm run play -- --port 4191 --path lol-autobattler --rounds 3
 ```
 
-最后一条会用 Playwright 走完整流程，**任何 4xx/5xx 都会被报出来**，
-所以它能证明子路径下立绘、头像、武器图标全都加载成功。
+### 直接测线上站点
+
+```powershell
+npm run play -- --url https://adv1346288207.github.io/lol-autobattler --rounds 3
+```
+
+两条都会用 Playwright 走完整流程，**任何 4xx/5xx 都会被报出来**，
+所以它们能证明子路径下立绘、头像、武器图标全都加载成功。
 
 ---
 
