@@ -95,7 +95,7 @@ describe("伤害结算与淘汰", () => {
     expect(state.players[1]!.hp).toBe(27);
   });
 
-  it("胜方存活血量总和 30 → 败方扣 16（饱和曲线）", () => {
+  it("胜方存活血量总和 30 → 败方扣 11（饱和曲线 K=66）", () => {
     const { state, p } = makeCtx();
     place(state, p, "lan", 1);
     const other = state.players[1]!;
@@ -110,7 +110,7 @@ describe("伤害结算与淘汰", () => {
         survivors: [{ player: 0, cardUid: 1, hp: 30 }],
       } as typeof end;
       applyBattleResult(state, 0, 1, [...events.slice(0, -1), fake]);
-      expect(state.players[1]!.hp).toBe(30 - 16);
+      expect(state.players[1]!.hp).toBe(30 - 11);
     }
   });
 

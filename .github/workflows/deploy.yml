@@ -1,0 +1,61 @@
+name: Deploy to GitHub Pages
+
+# 推送到 master/main 就自动「取立绘 → 跑测试 → 构建 → 发布到 Pages」
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 立绘/头像是 Riot Data Dragon 的官方图，按 .gitignore 刻意不入库，
+      # 所以每次构建前现拉（这样仓库里只有代码，没有版权素材）
+      - name: Fetch LoL assets
+        run: npm run assets:lol
+
+      - name: Verify assets downloaded
+        run: npm run assets:check
+
+      - name: Test
+        run: npm test
+
+      - name: Build (base = ./ 相对路径，放在 /<repo>/ 子路径下也能用)
+        run: npm run web:build
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

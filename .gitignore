@@ -2,3 +2,13 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
+# 下载的 Riot Data Dragon 二进制资源（清单与说明仍可跟踪）
+web/public/assets/lol/champions/*.png
+web/public/assets/lol/portraits/*.jpg
+web/public/assets/lol/items/*.png
+web/public/assets/lol/splashes/
+web/public/assets/lol/spells/
+
+# 自走自检截图输出
+shots/

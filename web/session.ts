@@ -8,6 +8,7 @@ import { createRng, type Rng } from "../core/rng";
 import { beginRound, prepareBattle, resolveBattle } from "../core/phase";
 import { applyAction, type Action } from "../core/actions";
 import { runBotTurn, createBot, type Bot } from "../bot/random";
+import { pickMapForSeed, tallyMapVotes, type MapId, type MapVoteResult } from "../config/maps";
 
 export interface TurnPreview {
   /** 本回合对手（null=轮空） */
@@ -23,14 +24,19 @@ export class GameSession {
   private readonly bots: Map<number, Bot>;
   private lastBattleLog: BattleEvent[] = [];
 
-  constructor(seed: number) {
+  constructor(seed: number, mapId: MapId | null = pickMapForSeed(seed)) {
     this.seed = seed;
-    this.state = createGame(seed);
+    this.state = createGame(seed, mapId);
     this.rng = createRng(seed);
     this.bots = new Map(
       this.state.players.filter((p) => p.id !== 0).map((p) => [p.id, createBot(seed, p.id)]),
     );
     beginRound(this.state, this.rng);
+  }
+
+  /** 开局地图投票（玩家 0 的票由调用方给出，其余 AI 由 seed 派生） */
+  static voteMap(seed: number, playerVote: MapId | null): MapVoteResult {
+    return tallyMapVotes(seed, playerVote);
   }
 
   get player(): PlayerState {

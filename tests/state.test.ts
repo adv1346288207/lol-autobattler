@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createCardInstance, createGame } from "../core/state";
+import { createRng } from "../core/rng";
+import { applyAction } from "../core/actions";
 import { goldForRound, expToUpgrade } from "../config/economy";
 import { damageFromSurvivingHp } from "../config/damage";
 import { validateConfig } from "../config/validate";
@@ -19,10 +21,30 @@ describe("配置校验", () => {
     expect(shopConfig.qualityOdds[4]!.orange).toBe(30);
   });
 
-  it("分裂者是金卡品质的万能牌", () => {
-    const f = CARD_POOL.find((c) => c.id === "fenliezhe");
+  it("英雄复制器是金卡品质的万能牌，且不参与羁绊", () => {
+    const f = CARD_POOL.find((c) => c.type === "duplicator");
     expect(f?.quality).toBe("gold");
     expect(f?.wildcard).toBe("role");
+    expect(f?.region).toBeNull();
+    expect(f?.professions).toEqual([]);
+    // 旧卡不再进入正式商店卡池
+    expect(CARD_POOL.some((c) => c.id === "fenliezhe")).toBe(false);
+  });
+
+  it("英雄复制器不能上阵（只能留在仓库参与三合一补齐）", () => {
+    const state = createGame(1);
+    const rng = createRng(1);
+    const p = state.players[0]!;
+    const dup = createCardInstance(state, "duplicator");
+    p.hand.push(dup);
+    const snapshot = JSON.stringify(p);
+    expect(() => applyAction(state, rng, { type: "move", player: 0, cardUid: dup.uid, position: 1 })).toThrow(
+      /不能上阵/,
+    );
+    // 非法操作零污染
+    expect(JSON.stringify(p)).toBe(snapshot);
+    // 回手牌以外的目标格也不允许
+    expect(() => applyAction(state, rng, { type: "move", player: 0, cardUid: dup.uid, position: 5 })).toThrow();
   });
 });
 
@@ -82,14 +104,15 @@ describe("经验升级", () => {
   });
 });
 
-describe("伤害公式（饱和曲线，锚点按方案表）", () => {
-  it("锚点：10→7、30→16、50→21、80→26、120→29、200→30", () => {
-    expect(damageFromSurvivingHp(10)).toBe(7);
-    expect(damageFromSurvivingHp(30)).toBe(16);
-    expect(damageFromSurvivingHp(50)).toBe(21);
-    expect(damageFromSurvivingHp(80)).toBe(26);
-    expect(damageFromSurvivingHp(120)).toBe(29);
-    expect(damageFromSurvivingHp(200)).toBe(30);
+describe("伤害公式（饱和曲线，锚点按 LoL 卡池重调后的 K=66）", () => {
+  it("锚点：10→4、30→11、50→16、80→21、120→25、200→29、500→30", () => {
+    expect(damageFromSurvivingHp(10)).toBe(4);
+    expect(damageFromSurvivingHp(30)).toBe(11);
+    expect(damageFromSurvivingHp(50)).toBe(16);
+    expect(damageFromSurvivingHp(80)).toBe(21);
+    expect(damageFromSurvivingHp(120)).toBe(25);
+    expect(damageFromSurvivingHp(200)).toBe(29);
+    expect(damageFromSurvivingHp(500)).toBe(30);
     expect(damageFromSurvivingHp(100000)).toBe(30); // 封顶
     expect(damageFromSurvivingHp(0)).toBe(0);
   });

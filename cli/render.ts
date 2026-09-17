@@ -1,11 +1,13 @@
 /**
  * 文本渲染器（M3）：只读 GameState 输出可读文本，零逻辑
- * 将来图形 UI 替换本层
  */
 import type { BattleEvent, GameState, PlayerState, CardInstance } from "../core/state";
 import { alivePlayers } from "../core/state";
 import { CARD_BY_ID } from "../config/cards";
 import { expToUpgrade } from "../config/economy";
+import { damageConfig } from "../config/damage";
+import { traitName } from "../config/traits";
+import { activeTraitIds } from "../bot/random";
 
 const QUALITY_LABEL: Record<string, string> = {
   green: "绿",
@@ -18,7 +20,13 @@ const QUALITY_LABEL: Record<string, string> = {
 export function cardLabel(c: CardInstance): string {
   const config = CARD_BY_ID.get(c.configId)!;
   const lv = c.level === 2 ? "★金" : "";
-  return `#${c.uid} ${config.name}${lv}(${QUALITY_LABEL[config.quality]}) ${c.atk}攻/${c.hp}血`;
+  const tags: string[] = [];
+  if (config.region) tags.push(traitName(config.region));
+  for (const prof of config.professions) tags.push(traitName(prof));
+  const tagText = tags.length > 0 ? `[${tags.join("/")}]` : "";
+  const skillText = config.skill ? ` 技:${config.skill.name}` : "";
+  const manaText = config.maxMana > 0 ? ` 法:${config.startMana}/${config.maxMana}` : "";
+  return `#${c.uid} ${config.name}${lv}${tagText}(${QUALITY_LABEL[config.quality]}) ${c.atk}攻/${c.hp}血${skillText}${manaText}`;
 }
 
 export function renderShop(p: PlayerState): string {
@@ -33,10 +41,13 @@ export function renderShop(p: PlayerState): string {
         .map((id, i) => {
           if (id === null) return `[${i}] 空`;
           const c = CARD_BY_ID.get(id)!;
-          return `[${i}] ${c.name}(${QUALITY_LABEL[c.quality]}) ${c.atk}攻/${c.hp}血 价${c.price}`;
+          const skill = c.skill ? ` 技:${c.skill.name}` : "";
+          return `[${i}] ${c.name}(${QUALITY_LABEL[c.quality]}) ${c.atk}攻/${c.hp}血 价${c.price}${skill}`;
         })
         .join("  |  "),
   );
+  const traits = activeTraitIds(p);
+  lines.push(`羁绊: ${traits.length > 0 ? traits.map((t) => traitName(t)).join("、") : "（未激活）"}`);
   lines.push("手牌: " + (p.hand.map(cardLabel).join("  |  ") || "（空）"));
   const board = p.board
     .map((c, i) => {
@@ -53,7 +64,7 @@ export function renderScoreboard(state: GameState): string {
   for (const p of state.players) {
     const tag = p.id === 0 ? "（你）" : p.eliminated ? "（出局）" : "";
     const rank = p.rank !== null ? ` 第${p.rank}名` : "";
-    lines.push(`  玩家${p.id}${tag}: 血量 ${p.hp}/30${rank}`);
+    lines.push(`  玩家${p.id}${tag}: 血量 ${p.hp}/${damageConfig.initialHp}${rank}`);
   }
   return lines.join("\n");
 }
@@ -77,8 +88,44 @@ export function renderBattleLog(log: BattleEvent[], state: GameState): string {
       case "ATTACK":
         lines.push(`  ${name(e.from)} → ${name(e.to)} -${e.dmg}`);
         break;
+      case "SKILL_CAST":
+        lines.push(`  ✨ ${name(e.caster)} 施放【${e.skillName}】→ ${e.targets.map(name).join("、")}`);
+        break;
+      case "DAMAGE":
+        lines.push(
+          `     ${name(e.target)} -${e.amount}${e.absorbed > 0 ? `（护盾吸收 ${e.absorbed}）` : ""} 剩余 ${e.remainingHp}`,
+        );
+        break;
+      case "HEAL":
+        lines.push(`     ${name(e.target)} 回复 ${e.amount}（${e.remainingHp}）`);
+        break;
+      case "SHIELD_GAIN":
+        lines.push(`     ${name(e.target)} 获得护盾 ${e.amount}（共 ${e.totalShield}）`);
+        break;
+      case "SHIELD_BREAK":
+        lines.push(`     ${name(e.target)} 破盾 ${e.amount}`);
+        break;
+      case "STATUS_APPLY":
+        lines.push(`     ${name(e.target)} 被施加 ${e.status}（${e.duration} 次行动）`);
+        break;
+      case "STATUS_REMOVE":
+        lines.push(`     ${name(e.target)} 的 ${e.status} 结束`);
+        break;
+      case "JUMP":
+        lines.push(`     ${name(e.who)} 突进${e.toRow === "back" ? "后排" : "前排"}`);
+        break;
+      case "REVIVE":
+        lines.push(`     ${name(e.who)} 时空回溯，恢复至 ${e.hp} 生命`);
+        break;
+      case "TRAIT_TRIGGER":
+        lines.push(
+          `     [羁绊] 玩家${e.owner} ${traitName(e.trait as never)} ${e.tier === 1 ? 4 : 2} 人档 → ${e.targets.map(name).join("、")}`,
+        );
+        break;
+      case "MANA_CHANGE":
+        break; // 法力变化过于琐碎，CLI 不展示
       case "DEATH":
-        lines.push(`  ${name(e.who)} 阵亡`);
+        lines.push(`  ☠ ${name(e.who)} 阵亡${e.killer !== null ? `（${name(e.killer)} 击杀）` : ""}`);
         break;
       case "BATTLE_END":
         if (e.winner === null) lines.push(`  ⚖ 平局（双方各扣 3）`);

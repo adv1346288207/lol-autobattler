@@ -2,24 +2,62 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>悠悠牌 MVP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1020" />
+    <title>英雄战棋 · LoL 自动战斗（本地原型）</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%9A%94%3C/text%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <div id="app">
-      <header id="topbar"></header>
-      <section id="opps"></section>
-      <section id="shop"></section>
-      <section id="shopbtns"></section>
-      <section id="board"></section>
-      <section id="bottom">
-        <div id="hand"></div>
-        <button id="ready">准备</button>
-      </section>
-      <div id="overlay" class="hidden"></div>
-      <div id="toast" class="hidden"></div>
+    <!-- 外层黑边：桌面浏览器居中一块手机横屏区域（手机上是全屏） -->
+    <div id="phone">
+      <div id="app">
+        <div id="vignette"></div>
+
+        <!-- 顶栏：左上角状态 + 8 名对手头像 + 羁绊图标（都横排、各自横滑） -->
+        <header id="topbar">
+          <div id="tb-left"></div>
+          <div id="opps"></div>
+          <div id="traits"></div>
+        </header>
+
+        <div id="stage">
+          <!-- 左列：商店（3 张横版卡竖排） + 刷新/升级 + 准备 -->
+          <section id="shoppanel">
+            <div id="shop"></div>
+            <div id="shopbtns"></div>
+            <div id="readybar">
+              <button id="ready">准备</button>
+            </div>
+          </section>
+
+          <!-- 右列：棋盘 -->
+          <section id="arena">
+            <div id="board"></div>
+            <div id="arena-mark">HERO SHOT</div>
+          </section>
+        </div>
+
+        <!-- 底部：仓库（武器与英雄共用一条横滑槽） -->
+        <section id="bottom">
+          <div id="hand"></div>
+        </section>
+
+        <footer id="disclaimer">
+          本地非商业粉丝原型 · 未获 Riot Games 背书或赞助 · 英雄名称与立绘归 Riot Games 所有
+        </footer>
+
+        <div id="detail" class="hidden"></div>
+        <div id="overlay" class="hidden"></div>
+        <div id="toast" class="hidden"></div>
+      </div>
     </div>
+
+    <!-- 开始界面 / 匹配选图 / 图鉴（覆盖在游戏之上） -->
+    <div id="match" class="hidden"></div>
+    <div id="codex" class="hidden"></div>
+    <div id="start" class="hidden"></div>
+
     <script type="module" src="/main.ts"></script>
   </body>
 </html>

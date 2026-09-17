@@ -11,6 +11,8 @@ export const shopConfig = {
   refreshCost: 1,
   /** 手牌上限 */
   handLimit: 15,
+  /** 武器库存上限（装备前存放武器的位置） */
+  weaponLimit: 8,
   /** 场上卡位（前3后3） */
   boardSize: 6,
   /** 商店最高等级 */

@@ -10,10 +10,16 @@
     "sim": "tsx cli/main.ts",
     "web": "vite",
     "web:build": "vite build",
-    "web:preview": "vite preview --port 4173"
+    "play": "node scripts/play-web.mjs",
+    "serve:dist": "node scripts/serve-static.mjs --dir dist --prefix /lol-autobattler --port 4191",
+    "web:preview": "vite preview --port 4173",
+    "assets:check": "node scripts/verify-assets.mjs",
+    "assets:lol": "node scripts/fetch-lol-assets.mjs",
+    "assets:lol:latest": "node scripts/fetch-lol-assets.mjs --latest"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "playwright-core": "^1.63.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vite": "^5.4.0",
