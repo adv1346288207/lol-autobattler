@@ -11,6 +11,7 @@
     "web": "vite",
     "web:build": "vite build",
     "play": "node scripts/play-web.mjs",
+    "probe:battle": "node scripts/check-battle-panel.mjs",
     "probe:viewport": "node scripts/probe-viewport.mjs",
     "serve:dist": "node scripts/serve-static.mjs --dir dist --prefix /lol-autobattler --port 4191",
     "web:preview": "vite preview --port 4173",

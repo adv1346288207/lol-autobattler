@@ -31,7 +31,7 @@ const CASES = [
 const browser = await chromium.launch({ headless: true, executablePath: CHROME, args: ["--hide-scrollbars"] });
 let bad = 0;
 
-console.log("屏幕            视口        游戏区       宽高比  占屏面积  溢出");
+console.log("屏幕            视口        游戏区       宽高比  占屏面积  溢出   （固定 9:20）");
 console.log("─".repeat(74));
 
 for (const c of CASES) {
@@ -66,7 +66,8 @@ for (const c of CASES) {
   const ratio = (m.pw / m.ph).toFixed(3);
   const over = m.overflowX > 1 || m.overflowY > 1 ? `X ${m.overflowX}/${m.overflowY}` : "无";
   const badKeys = m.out.length ? `  缺/超界: ${m.out.join(",")}` : "";
-  const flag = m.pw < 300 || m.overflowX > 1 || m.overflowY > 1 || m.out.length ? " ❌" : "";
+  // 固定 9:20 之后，窄屏手机就是会出 288 宽（360×0.45×… 的比例），这属于设计预期
+  const flag = m.pw < 280 || m.overflowX > 1 || m.overflowY > 1 || m.out.length ? " ❌" : "";
   if (flag) bad++;
   console.log(
     `${c.name.padEnd(12)} ${`${c.w}×${c.h}`.padEnd(11)} ${`${Math.round(m.pw)}×${Math.round(m.ph)}`.padEnd(12)} ${ratio}   ${area.toFixed(0).padStart(3)}%     ${over}${badKeys}${flag}`,

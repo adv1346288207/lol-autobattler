@@ -35,14 +35,9 @@
   --r-lg: 14px;
   --r-md: 10px;
   --r-sm: 6px;
-  /* 竖屏游戏区尺寸策略（自适应分辨率）：
-     - 最窄按 9:20（1080×2400）算，再窄就不是手机了
-     - 最宽放到 0.68，这样**平板/桌面窗口能明显变大**，而不是中间一条小窄条
-     - 宽度上限 500px：再宽就把手机界面拉变形了
-     旧的固定 0.45 做法在 1280×800 的平板上只能出 360×800，用户反馈"很小一块"。 */
-  --min-aspect: 0.45;
-  --max-aspect: 0.68;
-  --max-w: 500px;
+  /* 手机竖屏基准：9:20（1080×2400）。桌面/平板居中一块这个比例的区域，手机上是全屏。
+     ⚠️ 战斗面板 .battle-root 也用这个变量；改名或删掉会让 min() 失效、面板挤成一坨。 */
+  --aspect: 0.45;
   --side-w: 46px;
 }
 
@@ -64,16 +59,10 @@ body {
   user-select: none;
 }
 
-/* 自适应分辨率：高度吃满视口，宽度在「视口宽 / 500px 上限 / 高度×最宽比例」里取最小，
-   并保证不低于 高度×最窄比例（超高屏上不会把界面挤成细条）。 */
+/* 把整块 UI 当成手机竖屏，等比缩放居中，两侧留黑边 */
 #phone {
-  --phone-h: min(100dvh, calc(100vw / var(--min-aspect)));
-  height: var(--phone-h);
-  width: clamp(
-    calc(var(--phone-h) * var(--min-aspect)),
-    min(100vw, var(--max-w), calc(var(--phone-h) * var(--max-aspect))),
-    100vw
-  );
+  width: min(100vw, calc(100vh * var(--aspect)));
+  height: min(100vh, calc(100vw / var(--aspect)));
   display: flex;
 }
 

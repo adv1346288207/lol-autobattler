@@ -49,9 +49,13 @@ TypeScript + Vite + Vitest 项目。**LoL 改编 + 第二轮优化 + 手机竖�
   加成长的正是当时最弱的诺克萨斯与射手，属于**有数据支持的补强**。
 - **出售区**：拖动自己已有的卡/武器时，商店面板上盖一层半透明「出售区」+ 回收价（`core/shop.ts` 的 `sellPriceOf`），
   悬停时点亮，松手移除。遮罩必须 `pointer-events:none`，否则会挡住 `elementFromPoint` 的落点判定。
-- **自适应分辨率**：`#phone` 不再死守 9:20——高度吃满视口，宽度在「视口宽 / 500px 上限 / 高度×0.68」里取最小、
-  且不低于「高度×0.45」。效果：小屏手机 288→360 宽（占满）、横屏平板 360→500 宽。
-  用 `npm run probe:viewport` 在 7 种尺寸上量（会检查溢出与关键元素是否越界）。
+- **分辨率：固定 9:20（已回退，不要再改）**。曾经试过"自适应分辨率"（宽度在视口宽/500px/高度×0.68 里取值），
+  用户反馈界面出问题，已**整套回退**成 `--aspect: 0.45` + `#phone { width: min(100vw, 100vh*aspect) }`。
+  ⚠️ **教训**：那次改动把 `--aspect` 改名成了 `--min-aspect`/`--max-aspect`，
+  但 `.battle-root` 仍在用 `var(--aspect)` —— 变量不存在 → `min()` 整条失效 → **战斗结算面板挤成中间一小坨**。
+  改尺寸相关的 CSS 变量前，先 `Select-String -Path web/style.css -Pattern 'var\(--aspect'` 查全部引用点。
+  自检：`npm run probe:viewport`（7 种尺寸量游戏区并查溢出）、
+  `npm run probe:battle`（量 .battle-root 是否铺满、格子是否正常）。
 - **最后一局必须播完战斗**：`finishGameIfNeeded()` 只能在战斗视图点完【继续】之后调用。
   之前为了防卡死把它提到开战前，导致"最后一局直接结算、看不到自己那场战斗"（用户反馈）。
 ## 已部署（线上可玩）
