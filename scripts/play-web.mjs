@@ -382,6 +382,29 @@ async function main() {
       await fight.first().click();
       await page.waitForTimeout(600);
       await shot(page, `r${round}-battle`);
+
+      // 自检：战斗中点击单位（含对手）能弹出状态面板
+      {
+        const units = page.locator(".battle-unit.tappable");
+        const n = await units.count();
+        // 点最后一个：通常是对手那一半
+        if (n > 0) {
+          await units.nth(n - 1).click();
+          await page.waitForTimeout(280);
+          const opened = await page.locator("#detail .bu-detail").count();
+          const text = opened ? await page.locator("#detail .bu-detail").textContent() : "";
+          if (opened > 0) await shot(page, `r${round}-battle-unit-detail`);
+          await page.locator("#detail .panel-foot .btn").click().catch(() => {});
+          await page.waitForTimeout(150);
+          if (opened > 0 && /当前状态|生命|攻击/.test(text)) {
+            log(`  ✅ 战斗中点单位弹出状态（${n} 个可点，含对手）`);
+          } else {
+            problems.push(`[战斗中查看状态] 面板数=${opened}，文本=${(text || "").slice(0, 40)}`);
+          }
+        } else {
+          problems.push("[战斗中查看状态] 没有任何可点的战斗单位");
+        }
+      }
       // 跳过加速，直接等“继续”
       const skip = page.locator("#overlay .btn", { hasText: "跳过" });
       if (await skip.first().isVisible().catch(() => false)) await skip.first().click().catch(() => {});

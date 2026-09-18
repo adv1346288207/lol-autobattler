@@ -61,6 +61,99 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/* ══════════ 战斗中点单位看状态 ══════════ */
+
+
+/**
+ * 战斗中点任意单位（含对手）弹出状态面板：
+ * 当前/最大生命、攻击、法力、护盾、状态、装备、技能。
+ * 战斗还在播放也能点，面板是独立的 fixed 层，不打断播放。
+ */
+export function showBattleUnitDetail(snap: BattleUnitSnapshot, isMine: boolean): void {
+  const config = CARD_BY_ID.get(snap.configId);
+  const host = hostDetail();
+  if (!config || !host) return;
+
+  const panel = el("div", "panel bu-detail");
+  const head = el("div", "detail-head");
+  const art = el("div", "detail-art");
+  art.appendChild(artEl(config));
+  head.appendChild(art);
+
+  const meta = el("div", "detail-meta");
+  meta.appendChild(el("div", "detail-name", `${config.name}${snap.level === 2 ? " ★★" : ""}`));
+  meta.appendChild(
+    el("div", "detail-sub", `${isMine ? "我方" : "对手"} · ${snap.position}${snap.position <= 3 ? "前" : "后"}位`),
+  );
+  const stats = el("div", "detail-stats");
+  const addStat = (cls: string, label: string, value: string) => {
+    const chip = el("span", `detail-chip ${cls}`);
+    chip.appendChild(el("i", undefined, label));
+    chip.appendChild(el("b", undefined, value));
+    stats.appendChild(chip);
+  };
+  addStat("atk", "攻击", String(snap.atk));
+  addStat("hp", "生命", `${snap.hp}/${snap.maxHp}`);
+  if (snap.shield > 0) addStat("shield", "护盾", String(snap.shield));
+  if (config.maxMana > 0) addStat("mana", "法力", `${snap.mana}/${snap.maxMana}`);
+  meta.appendChild(stats);
+  head.appendChild(meta);
+  panel.appendChild(head);
+  panel.appendChild(el("div", "panel-sep"));
+
+  // 状态
+  const statusBlock = el("div", "detail-block");
+  statusBlock.appendChild(el("h4", undefined, "当前状态"));
+  if (snap.statuses.length === 0) {
+    statusBlock.appendChild(el("div", "detail-sub", "无异常状态"));
+  } else {
+    const row = el("div", "bu-status-list");
+    for (const st of snap.statuses) {
+      const left = Math.max(0, st.duration ?? 0);
+      row.appendChild(
+        el("span", "status-chip", `${STATUS_LABEL[st.id] ?? st.id}${left > 0 ? ` · 剩 ${left} 次行动` : ""}`),
+      );
+    }
+    statusBlock.appendChild(row);
+  }
+  statusBlock.appendChild(
+    el("div", "detail-sub", `已普攻 ${snap.attackCount} 次 · 已施法 ${snap.castCount} 次`),
+  );
+  panel.appendChild(statusBlock);
+
+  // 装备（战斗中：只显示已装备的，不显示空格）
+  if (snap.equips && snap.equips.length > 0) {
+    const block = el("div", "detail-block");
+    block.appendChild(el("h4", undefined, "武器槽"));
+    const slots = el("div", "equip-slots");
+    for (const eq of snap.equips) {
+      const wcfg = CARD_BY_ID.get(eq.configId);
+      const slot = el("div", "equip-slot filled");
+      if (wcfg) slot.appendChild(artEl(wcfg, "equip-slot-img"));
+      slot.appendChild(el("span", "equip-slot-stat", `+${eq.atk}/+${eq.hp}`));
+      if (eq.level === 2) slot.appendChild(el("span", "equip-slot-star", "★"));
+      slots.appendChild(slot);
+    }
+    block.appendChild(slots);
+    panel.appendChild(block);
+  }
+
+  if (config.skill) {
+    const block = el("div", "detail-block");
+    block.appendChild(el("h4", undefined, `主动技能 · ${config.skill.name}`));
+    block.appendChild(el("div", undefined, config.skill.desc));
+    panel.appendChild(block);
+  }
+
+  const foot = el("div", "panel-foot");
+  const close = el("button", "btn btn-gold", "知道了");
+  close.addEventListener("click", () => hideDetail());
+  foot.appendChild(close);
+  panel.appendChild(foot);
+  host.replaceChildren(panel);
+  host.classList.remove("hidden");
+}
+
 /* ══════════ 出售区（拖动时盖在商店面板上） ══════════ */
 
 /**
@@ -889,68 +982,49 @@ export function showCardDetail(
     );
     if (config.weaponDesc) block.appendChild(el("div", "detail-sub", config.weaponDesc));
     panel.appendChild(block);
-  } else if (equips.length > 0) {
-    let sumAtk = 0;
-    let sumHp = 0;
-    for (const e of equips) {
-      sumAtk += e.atk;
-      sumHp += e.hp;
-    }
+  } else if (config.type === "hero") {
+
+    // 用户要求：这一栏不要长段说明，就放两个框——有装备显示图标，空的就是空框
     const block = el("div", "detail-block");
-    block.appendChild(el("h4", undefined, `已装备武器 ${equips.length}/${EQUIP_SLOTS}`));
-    for (const equip of equips) {
-      const wcfg = CARD_BY_ID.get(equip.configId);
-      const row = el("div", "equip-row");
-      const icon = el("span", "equip-icon");
-      if (wcfg) icon.appendChild(artEl(wcfg, "equip-img"));
-      row.appendChild(icon);
-      const text = el("span", "equip-text");
-      text.appendChild(el("b", undefined, `${wcfg?.name ?? equip.configId}${equip.level === 2 ? " ★★" : ""}`));
-      text.appendChild(el("span", "equip-stat", ` +${equip.atk} 攻 / +${equip.hp} 血`));
-      row.appendChild(text);
-      if (opts.onUnequip) {
-        const btn = el("button", "btn equip-off", "卸下");
-        btn.addEventListener("click", () => {
-          hideDetail();
-          opts.onUnequip!(equip.uid);
-        });
-        row.appendChild(btn);
+    block.appendChild(el("h4", undefined, "武器槽"));
+    const slots = el("div", "equip-slots");
+    for (let i = 0; i < EQUIP_SLOTS; i++) {
+      const equip = equips[i];
+      const slot = el("div", equip ? "equip-slot filled" : "equip-slot");
+      if (equip) {
+        const wcfg = CARD_BY_ID.get(equip.configId);
+        if (wcfg) slot.appendChild(artEl(wcfg, "equip-slot-img"));
+        slot.appendChild(el("span", "equip-slot-stat", `+${equip.atk}/+${equip.hp}`));
+        if (equip.level === 2) slot.appendChild(el("span", "equip-slot-star", "★"));
+        const label = `${wcfg?.name ?? equip.configId}${equip.level === 2 ? " ★★" : ""} · +${equip.atk} 攻 / +${equip.hp} 血`;
+        slot.title = opts.onUnequip ? `${label}（点击卸下）` : label;
+        if (opts.onUnequip) {
+          const uid = equip.uid;
+          slot.classList.add("tappable");
+          slot.addEventListener("click", () => {
+            hideDetail();
+            opts.onUnequip!(uid);
+          });
+        }
+      } else {
+        slot.appendChild(el("span", "equip-slot-empty", "空"));
+        slot.title = "空武器槽";
       }
-      block.appendChild(row);
+      slots.appendChild(slot);
     }
+    block.appendChild(slots);
+    // 一行小字说明合计（两个框本身看不出装备加成后的面板值）
+    const sumAtk = equips.reduce((n, e) => n + e.atk, 0);
+    const sumHp = equips.reduce((n, e) => n + e.hp, 0);
     block.appendChild(
       el(
         "div",
         "detail-sub",
-        `自身 ${atk - sumAtk} 攻 / ${hp - sumHp} 血；含装备后面板合计 ${atk} 攻 / ${hp} 血。`,
+        sumAtk + sumHp > 0
+          ? `自身 ${atk - sumAtk} 攻 / ${hp - sumHp} 血 · 合计 ${atk} 攻 / ${hp} 血`
+          : `自身 ${atk} 攻 / ${hp} 血`,
       ),
     );
-    panel.appendChild(block);
-  } else if (config.type === "hero") {
-    panel.appendChild(
-      el(
-        "div",
-        "detail-block",
-        `未装备武器。买到武器后，把仓库里的武器拖到这名英雄身上即可装备（每名英雄 ${EQUIP_SLOTS} 个武器槽，装满了再拖会自动替换较弱的一件）。`,
-      ),
-    );
-  }
-
-  // 二星预览：合成按「三张之和」，所以一星基础值 ×3；技能数值取配置里的二星档
-  if (config.type === "hero") {
-    const block = el("div", "detail-block");
-    block.appendChild(el("h4", undefined, "星级成长"));
-    if (level === 2) {
-      block.appendChild(el("div", undefined, "当前为二星卡：攻血为三张之和，技能数值按二星档结算。"));
-    } else {
-      block.appendChild(
-        el(
-          "div",
-          undefined,
-          `合成二星（三张同名）：攻击 ${atk} → ${atk * 3}，生命 ${hp} → ${hp * 3}；技能数值改用斜杠后面的二星档。`,
-        ),
-      );
-    }
     panel.appendChild(block);
   }
 
@@ -1458,6 +1532,10 @@ export function showBattleView(events: BattleEvent[], onDone: () => void, meId =
     topRow.appendChild(el("div", "bu-name", `${config.name}${snap.level === 2 ? "★" : ""}`));
     topRow.appendChild(statusBox);
     unit.appendChild(topRow);
+
+    // 点单位看状态（含对手）；战斗中播放不打断
+    unit.classList.add("tappable");
+    unit.addEventListener("click", () => showBattleUnitDetail(snap, snap.owner === meId));
 
     const atkText = el("div", "bu-atk", String(snap.atk));
     const hpText2 = el("div", "bu-hp", String(snap.hp));

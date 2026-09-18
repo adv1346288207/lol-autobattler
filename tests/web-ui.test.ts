@@ -454,7 +454,7 @@ describe("Web 渲染层烟测（最小 DOM 假实现）", () => {
     expect(p.weapons.map((w) => w.configId)).toContain("long_sword");
   });
 
-  it("卡牌详情展示装备加成与自身数值拆分", async () => {
+  it("卡牌详情的武器槽按「两个框」渲染，装备加成体现在合计小字里", async () => {
     const ui = await import("../web/ui");
     const { state } = freshState();
     const p = state.players[0]!;
@@ -466,10 +466,15 @@ describe("Web 渲染层烟测（最小 DOM 假实现）", () => {
       player: p,
     });
     const detail = registry.get("detail")!;
-    expect(byText(detail, "已装备武器 1/2")).not.toBeNull();
-    expect(byText(detail, "无尽之刃")).not.toBeNull();
-    expect(byText(detail, " +9 攻 / +6 血")).not.toBeNull();
-    expect(byText(detail, "自身 3 攻 / 7 血；含装备后面板合计 12 攻 / 13 血。")).not.toBeNull();
+    // 固定两个槽位：一个装了无尽之刃，一个空着
+    const slots = detail.querySelectorAll(".equip-slot");
+    expect(slots).toHaveLength(2);
+    expect(detail.querySelectorAll(".equip-slot.filled")).toHaveLength(1);
+    expect(detail.querySelectorAll(".equip-slot-stat")[0]?.textContent).toBe("+9/+6");
+    // 不再有旧的「已装备武器 1/2」文字行
+    expect(byText(detail, "已装备武器 1/2")).toBeNull();
+    // 合计仍要能看到（自身 3/7 + 装备 9/6 = 12/13）
+    expect(byText(detail, "自身 3 攻 / 7 血 · 合计 12 攻 / 13 血")).not.toBeNull();
   });
 
   it("武器详情说明装备规则与万能牌", async () => {
@@ -546,7 +551,7 @@ describe("Web 渲染层烟测（最小 DOM 假实现）", () => {
     expect(byText(box, "3/4")).not.toBeNull();
   });
 
-  it("卡牌详情弹窗展示一星/二星数值、技能与羁绊，可关闭", async () => {
+  it("卡牌详情弹窗展示数值、技能与羁绊；武器槽是两个框且没有「星级成长」栏", async () => {
     const ui = await import("../web/ui");
     const { state } = freshState();
     const p = state.players[0]!;
@@ -558,10 +563,11 @@ describe("Web 渲染层烟测（最小 DOM 假实现）", () => {
     expect(byText(detail, "欺诈宝珠")).not.toBeNull();
     expect(byText(detail, "艾欧尼亚")).not.toBeNull();
     expect(byText(detail, "法师")).not.toBeNull();
-    expect(byText(detail, "星级成长")).not.toBeNull();
-    // 二星预览：攻 4 → 12，血 5 → 15
-    expect(byText(detail, "12")).not.toBeNull();
-    expect(byText(detail, "15")).not.toBeNull();
+    // 用户要求：删掉「星级成长」那一栏
+    expect(byText(detail, "星级成长")).toBeNull();
+    // 用户要求：武器槽只放两个框，不写说明文字
+    expect(detail.querySelectorAll(".equip-slot")).toHaveLength(2);
+    expect(byText(detail, "未装备武器")).toBeNull();
     ui.hideDetail();
     expect(detail.classList.contains("hidden")).toBe(true);
   });
