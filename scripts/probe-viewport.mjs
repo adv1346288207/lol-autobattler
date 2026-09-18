@@ -19,19 +19,21 @@ const CHROME = [
 ].find((p) => p);
 
 const CASES = [
-  { name: "小屏手机", w: 360, h: 640 },
-  { name: "常见手机", w: 393, h: 873 },
-  { name: "大屏手机", w: 430, h: 932 },
+  { name: "老机型 16:9", w: 360, h: 640 },
+  { name: "iPhoneSE 16:9", w: 375, h: 667 },
+  { name: "iPhone15 19.5:9", w: 393, h: 852 },
+  { name: "参考图 20:9", w: 432, h: 960 },
+  { name: "大屏 20:9", w: 430, h: 932 },
+  { name: "Xperia 21:9", w: 412, h: 960 },
   { name: "竖屏平板", w: 800, h: 1280 },
   { name: "横屏平板", w: 1280, h: 800 },
   { name: "笔记本", w: 1440, h: 900 },
-  { name: "带鱼屏", w: 2560, h: 1080 },
 ];
 
 const browser = await chromium.launch({ headless: true, executablePath: CHROME, args: ["--hide-scrollbars"] });
 let bad = 0;
 
-console.log("屏幕            视口        游戏区       宽高比  占屏面积  溢出   （固定 9:20）");
+console.log("屏幕            视口        游戏区       宽高比  占屏面积  溢出   （自适应）");
 console.log("─".repeat(74));
 
 for (const c of CASES) {
@@ -66,7 +68,7 @@ for (const c of CASES) {
   const ratio = (m.pw / m.ph).toFixed(3);
   const over = m.overflowX > 1 || m.overflowY > 1 ? `X ${m.overflowX}/${m.overflowY}` : "无";
   const badKeys = m.out.length ? `  缺/超界: ${m.out.join(",")}` : "";
-  // 固定 9:20 之后，窄屏手机就是会出 288 宽（360×0.45×… 的比例），这属于设计预期
+  // 阈值放宽到 280：窄屏手机可能出现更窄的游戏区，那不是 bug
   const flag = m.pw < 280 || m.overflowX > 1 || m.overflowY > 1 || m.out.length ? " ❌" : "";
   if (flag) bad++;
   console.log(

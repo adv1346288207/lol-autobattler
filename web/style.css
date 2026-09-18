@@ -35,9 +35,15 @@
   --r-lg: 14px;
   --r-md: 10px;
   --r-sm: 6px;
-  /* 手机竖屏基准：9:20（1080×2400）。桌面/平板居中一块这个比例的区域，手机上是全屏。
-     ⚠️ 战斗面板 .battle-root 也用这个变量；改名或删掉会让 min() 失效、面板挤成一坨。 */
+  /* 手机竖屏基准：9:20（1080×2400）——和参考截图一致。
+     ⚠️ 战斗面板 .battle-root 也用这个变量算自己的尺寸；
+        改名或删掉会让 min() 整条失效 → 战斗结算面板挤成一小坨（踩过一次）。
+        所以下面 #phone 的自适应**另开一组 --frame-*，绝不动这个 --aspect**。 */
   --aspect: 0.45;
+  /* 游戏区自适应范围：最窄 9:20、最宽 0.68，桌面端宽度封顶 500px */
+  --frame-min-aspect: 0.45;
+  --frame-max-aspect: 0.68;
+  --frame-max-w: 500px;
   --side-w: 46px;
 }
 
@@ -59,10 +65,21 @@ body {
   user-select: none;
 }
 
-/* 把整块 UI 当成手机竖屏，等比缩放居中，两侧留黑边 */
+/*
+ * 游戏区自适应：16:9 的老机型到 21:9 的带鱼屏都能铺满，
+ * 桌面/横屏平板最多 500px 宽（再宽就把手机界面拉变形了）。
+ * 高度吃满视口；宽度取「视口宽 / 500px / 高度×0.68」的最小值，
+ * 并保证不低于「高度×0.45」——超高屏上不会把界面挤成细条。
+ * ⚠️ 这里只用 --frame-*，刻意不碰 --aspect（战斗面板在用它）。
+ */
 #phone {
-  width: min(100vw, calc(100vh * var(--aspect)));
-  height: min(100vh, calc(100vw / var(--aspect)));
+  --frame-h: min(100dvh, calc(100vw / var(--frame-min-aspect)));
+  height: var(--frame-h);
+  width: clamp(
+    calc(var(--frame-h) * var(--frame-min-aspect)),
+    min(100vw, var(--frame-max-w), calc(var(--frame-h) * var(--frame-max-aspect))),
+    100vw
+  );
   display: flex;
 }
 

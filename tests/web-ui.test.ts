@@ -486,6 +486,20 @@ describe("Web 渲染层烟测（最小 DOM 假实现）", () => {
     expect(detail.descendants().some((e) => (e.textContent ?? "").includes("武器线的万能牌"))).toBe(true);
   });
 
+  it("CSS 变量 --aspect 必须同时被定义和被 .battle-root 引用（踩过的坑）", () => {
+    // 回归守卫：曾经把 --aspect 改名成 --min-aspect，但 .battle-root 还在用 var(--aspect)，
+    // 变量不存在 → 整条 min() 失效 → 战斗结算面板挤成中间一小坨。
+    // 现在 #phone 的自适应用独立的 --frame-*，--aspect 只服务战斗面板，两边互不影响。
+    const css = readFileSync(path.join(process.cwd(), "web", "style.css"), "utf8");
+    expect(css).toMatch(/--aspect:\s*[\d.]+;/);
+    const battleIdx = css.indexOf(".battle-root {");
+    expect(battleIdx).toBeGreaterThan(-1);
+    const battleRule = css.slice(battleIdx, css.indexOf("}", battleIdx));
+    expect(battleRule).toContain("var(--aspect)");
+    // 自适应那组变量不能反过来被战斗面板引用
+    expect(battleRule).not.toContain("var(--frame-");
+  });
+
   it("弹窗层级：卡牌详情 > 图鉴 > 开始界面 > 战斗遮罩（任一错位都会「点了没反应」）", () => {
     const css = readFileSync(path.join(process.cwd(), "web", "style.css"), "utf8");
     const grab = (sel: string) => {
