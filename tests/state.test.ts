@@ -32,7 +32,7 @@ describe("配置校验", () => {
   });
 
   it("英雄复制器不能上阵（只能留在仓库参与三合一补齐）", () => {
-    const state = createGame(1);
+    const state = createGame(1, null, { startingLoadout: false });
     const rng = createRng(1);
     const p = state.players[0]!;
     const dup = createCardInstance(state, "duplicator");
@@ -50,7 +50,7 @@ describe("配置校验", () => {
 
 describe("GameState 工厂", () => {
   it("8 名玩家、玩家 0 为人类、初始血量 30、阶段 shop、回合 1", () => {
-    const state = createGame(123);
+    const state = createGame(123, null, { startingLoadout: false });
     expect(state.players).toHaveLength(8);
     expect(state.players[0]!.isHuman).toBe(true);
     expect(state.players.slice(1).every((p) => !p.isHuman)).toBe(true);
@@ -70,7 +70,7 @@ describe("GameState 工厂", () => {
   });
 
   it("createCardInstance 分配递增 UID 并从配置读属性", () => {
-    const state = createGame(1);
+    const state = createGame(1, null, { startingLoadout: false });
     const a = createCardInstance(state, "lan");
     const b = createCardInstance(state, "lan");
     expect(a.uid).toBe(1);

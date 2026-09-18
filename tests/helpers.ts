@@ -12,7 +12,9 @@ export interface TestCtx {
 }
 
 export function makeCtx(seed = 12345): TestCtx {
-  const state = createGame(seed);
+  // 绝大多数测试关心的是某个机制本身，用干净棋盘（不带开局赠礼）更好断言；
+  // 开局赠礼本身由 tests/starting-loadout.test.ts 专门覆盖。
+  const state = createGame(seed, null, { startingLoadout: false });
   const rng = createRng(seed);
   return { state, rng, p: state.players[0]! };
 }

@@ -41,6 +41,11 @@ export interface CardConfig {
   passives: PassiveConfig[];
   /** 商店阶段被动（旧体系：兰 +经验 / 龙野 +免费刷新） */
   skills: SkillConfig[];
+  /**
+   * 成长属性（只有部分英雄有）：**上阵期间**每隔 `every` 回合永久 +atk/+hp。
+   * 累计值记在卡实例的 growthAtk/growthHp 上，不污染 card.atk/hp 的基础值。
+   */
+  growth?: { atk?: number; hp?: number; every?: number };
   /** 武器卡的一句话说明（卡面与图鉴展示用） */
   weaponDesc?: string;
   /** 万能补齐牌标记：role = 英雄线，weapon = 武器线 */
@@ -63,6 +68,7 @@ function hero(cfg: {
   maxMana: number;
   skill: ActiveSkillConfig;
   passives?: PassiveConfig[];
+  growth?: CardConfig["growth"];
 }): CardConfig {
   const { passives, ...rest } = cfg;
   return {
@@ -181,6 +187,7 @@ export const HERO_CARDS: CardConfig[] = [
     hp: 7,
     region: "noxus",
     professions: ["warrior"],
+    growth: { atk: 1 },
     startMana: 0,
     maxMana: 60,
     skill: {
@@ -208,6 +215,7 @@ export const HERO_CARDS: CardConfig[] = [
     hp: 7,
     region: "noxus",
     professions: ["marksman"],
+    growth: { atk: 1 },
     startMana: 20,
     maxMana: 70,
     skill: {
@@ -254,6 +262,7 @@ export const HERO_CARDS: CardConfig[] = [
     hp: 10,
     region: "noxus",
     professions: ["mage"],
+    growth: { hp: 3 },    // 斯维因：法师靠吸血越打越肉
     startMana: 40,
     maxMana: 100,
     skill: {
@@ -393,6 +402,7 @@ export const HERO_CARDS: CardConfig[] = [
     hp: 6,
     region: "piltover_zaun",
     professions: ["marksman"],
+    growth: { atk: 1 },   // 金克丝：射手越打越凶
     startMana: 20,
     maxMana: 80,
     skill: {

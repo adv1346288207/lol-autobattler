@@ -103,3 +103,13 @@ function refundFor(configId: string): number {
   if (!config) throw new Error(`sell: 未知卡牌 ${configId}`);
   return Math.floor(config.price * shopConfig.sellRatio);
 }
+
+/**
+ * 出售回收价（UI 用：拖动时在「出售区」上显示能拿回多少金币）。
+ * 找不到配置返回 0，调用方不必先做存在性检查。
+ */
+export function sellPriceOf(configId: string): number {
+  const config = CARD_BY_ID.get(configId);
+  if (!config) return 0;
+  return Math.floor(config.price * shopConfig.sellRatio);
+}

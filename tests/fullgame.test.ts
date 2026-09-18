@@ -57,7 +57,7 @@ describe("全流程（7 AI 完整对局）", () => {
   });
 
   it("全空板局：四场平局，人人扣 3", () => {
-    const state = createGame(1);
+    const state = createGame(1, null, { startingLoadout: false });
     const rng = createRng(1);
     beginRound(state, rng);
     // 清零金币/经验，隔离 R2 收入断言

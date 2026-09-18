@@ -63,6 +63,9 @@ function mergeThree(
     position: anchorPos,
     isFreeRefreshUsed: false,
     equips: kept,
+    // 成长属性跟着合并累加，不然合一次就把攒的成长吃掉
+    growthAtk: anchor.growthAtk + b.growthAtk + c.growthAtk,
+    growthHp: anchor.growthHp + b.growthHp + c.growthHp,
   };
   anchor.equips = [];
   if (overflow.length > 0) player.weapons.push(...overflow);

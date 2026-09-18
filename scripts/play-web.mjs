@@ -188,6 +188,19 @@ async function main() {
   await shot(page, "game-start");
   log("对局开始");
 
+  /* ── 自检：开局赠礼（1 绿英雄上阵 + 1 绿武器在库）与初始金币 ── */
+  {
+    const board = await page.locator("#board .board-slot .card").count();
+    const bag = await page.locator("#hand .bench-weapon").count();
+    const gold = await page.evaluate(() =>
+      Number((document.querySelector("#tb-left .tb-gold span:last-child")?.textContent ?? "0").replace(/\D/g, "")),
+    );
+    if (board === 1 && bag === 1) log(`  ✅ 开局赠礼：棋盘 ${board} 个英雄、仓库 ${bag} 件武器`);
+    else problems.push(`[开局赠礼] 棋盘英雄 ${board}（应 1）、仓库武器 ${bag}（应 1）`);
+    if (gold === 2) log(`  ✅ 初始金币 ${gold}`);
+    else problems.push(`[初始金币] 显示 ${gold}，应为 2`);
+  }
+
   for (let round = 1; round <= ROUNDS; round++) {
     // 自检 0：准备按钮被禁用时，必须已经弹出终局面板——否则就是卡死
     if (await page.locator("#ready").isDisabled()) {
@@ -248,7 +261,17 @@ async function main() {
       await page.mouse.move(box.x + box.width / 2 + 26, box.y + box.height / 2 + 26, { steps: 4 });
       const ghosts = await page.locator(".drag-ghost").count();
       const ghostBox = ghosts ? await page.locator(".drag-ghost").first().boundingBox() : null;
+      const zoneText = await page.locator("#sellzone").textContent().catch(() => null);
       if (ghosts > 0) await shot(page, `r${round}-weapon-drag-ghost`);
+      // 移到商店上方：出售区应点亮
+      const shopBox = await page.locator("#shoppanel").boundingBox();
+      // 停在下半部分截图：字在上方，这样截图能同时看到遮罩和文字
+      await page.mouse.move(shopBox.x + shopBox.width / 2, shopBox.y + shopBox.height * 0.72, { steps: 5 });
+      const zoneOnShop = await page
+        .locator("#sellzone")
+        .evaluate((el) => el.classList.contains("active"))
+        .catch(() => false);
+      if (zoneOnShop && ghosts > 0) await shot(page, `r${round}-sell-zone`);
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 3 });
       await page.mouse.up();
       await page.waitForTimeout(150);
@@ -257,6 +280,12 @@ async function main() {
       } else {
         problems.push(`[拖武器无幽灵] 数量=${ghosts}，尺寸=${ghostBox ? `${Math.round(ghostBox.width)}×${Math.round(ghostBox.height)}` : "无"}`);
       }
+      if (zoneText && zoneText.includes("出售区")) log(`  ✅ 拖动时显示出售区（${zoneText.replace(/\s+/g, "")}）`);
+      else problems.push(`[无出售区] 拖动时 #sellzone 文本=${zoneText}`);
+      if (zoneOnShop) log("  ✅ 悬停到商店时出售区点亮");
+      else problems.push("[出售区未点亮] 悬停在商店上没有 active 类");
+      if ((await page.locator("#sellzone").count()) === 0) log("  ✅ 松手后出售区已移除");
+      else problems.push("[出售区残留] 拖拽结束后 #sellzone 还在");
     }
 
     await shot(page, `r${round}-after-equip`);

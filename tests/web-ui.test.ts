@@ -227,7 +227,7 @@ function byText(root: FakeEl, text: string): FakeEl | null {
 }
 
 function freshState(seed = 88) {
-  const state = createGame(seed);
+  const state = createGame(seed, null, { startingLoadout: false });
   const rng = createRng(seed);
   beginRound(state, rng);
   return { state, rng };

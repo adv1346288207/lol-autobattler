@@ -61,6 +61,34 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/* ══════════ 出售区（拖动时盖在商店面板上） ══════════ */
+
+/**
+ * 拖动自己已有的卡/武器时，在商店面板上盖一层半透明「出售区」并显示回收价
+ * （参考截图）。必须 `pointer-events: none`，否则会挡住 elementFromPoint 的落点判定。
+ */
+export function showSellZone(price: number): void {
+  const panel = document.getElementById("shoppanel");
+  if (!panel) return;
+  hideSellZone();
+  const zone = el("div", "sell-zone");
+  zone.id = "sellzone";
+  const title = el("div", "sell-zone-title", "出售区");
+  const row = el("div", "sell-zone-price");
+  row.appendChild(el("span", "coin"));
+  row.appendChild(el("span", undefined, String(price)));
+  zone.append(title, row);
+  panel.appendChild(zone);
+}
+
+export function hideSellZone(): void {
+  document.getElementById("sellzone")?.remove();
+}
+
+export function setSellZoneActive(on: boolean): void {
+  document.getElementById("sellzone")?.classList.toggle("active", on);
+}
+
 function cardName(c: CardInstance | { uid: number; configId: string }): string {
   return CARD_BY_ID.get(c.configId)?.name ?? c.configId;
 }
@@ -125,6 +153,9 @@ interface CardFaceOpts {
   equips?: EquipInstance[];
   /** 卡牌实例 uid（拖拽命中用） */
   uid?: number;
+  /** 成长累计值（>0 时卡面右上角显示 +N） */
+  growthAtk?: number;
+  growthHp?: number;
 }
 
 /**
@@ -153,6 +184,13 @@ export function cardFace(opts: CardFaceOpts): HTMLElement {
       fill.style.width = `${config.maxMana > 0 ? Math.min(100, (config.startMana / config.maxMana) * 100) : 0}%`;
       bar.appendChild(fill);
       frame.appendChild(bar);
+    }
+    // 成长角标：上阵攒出来的攻/血，卡面右上角一个小绿标
+    const gAtk = opts.growthAtk ?? 0;
+    const gHp = opts.growthHp ?? 0;
+    if (gAtk + gHp > 0) {
+      const parts = [gAtk > 0 ? `+${gAtk}攻` : "", gHp > 0 ? `+${gHp}血` : ""].filter(Boolean);
+      frame.appendChild(el("div", "card-growth", parts.join(" ")));
     }
     // 武器槽：2 格，有装备就显示武器图标
     const slot = el("div", "card-weapon");
@@ -656,6 +694,8 @@ export function renderCard(c: CardInstance, extraClass = ""): HTMLElement {
     hp: totalHp(c),
     equips: c.equips,
     uid: c.uid,
+    growthAtk: c.growthAtk,
+    growthHp: c.growthHp,
     extraClass,
   });
 }
@@ -772,6 +812,9 @@ export function showCardDetail(
     equips?: EquipInstance[];
     /** 卡牌实例 uid（有 uid 且已装备时才显示【卸下】） */
     uid?: number;
+    /** 成长累计值：>0 时详情里显示「已成长」 */
+    growthAtk?: number;
+    growthHp?: number;
     onUnequip?: (weaponUid: number) => void;
   } = {},
 ): void {
@@ -802,6 +845,18 @@ export function showCardDetail(
     ),
   );
   if (!isWeapon) meta.appendChild(traitTags(config));
+  // 成长说明：让玩家一眼看出这张卡会越打越强（以及已经攒了多少）
+  const g = config.growth;
+  if (g) {
+    const per = [g.atk ? `+${g.atk} 攻` : "", g.hp ? `+${g.hp} 血` : ""].filter(Boolean).join(" / ");
+    const every = (g.every ?? 1) > 1 ? `每 ${g.every} 回合` : "每回合";
+    const got = (opts.growthAtk ?? 0) + (opts.growthHp ?? 0);
+    const parts = [`成长：上阵时${every} ${per}`];
+    if ((opts.growthAtk ?? 0) > 0 || (opts.growthHp ?? 0) > 0) {
+      parts.push(`已累计 +${opts.growthAtk ?? 0} 攻 +${opts.growthHp ?? 0} 血`);
+    }
+    meta.appendChild(el("div", got > 0 ? "detail-growth on" : "detail-growth", parts.join(" · ")));
+  }
 
   const stats = el("div", "detail-stat-row");
   const addStat = (cls: string, label: string, value: string) => {

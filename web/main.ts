@@ -11,6 +11,7 @@ import { GameSession } from "./session";
 import {
   boardPower,
   hideDetail,
+  hideSellZone,
   renderBoard,
   renderHand,
   renderOppStrip,
@@ -19,6 +20,7 @@ import {
   renderShopButtons,
   renderTopbar,
   renderTraits,
+  setSellZoneActive,
   showBattleView,
   showCardDetail,
   showCompendium,
@@ -26,6 +28,7 @@ import {
   showMatchScreen,
   showOpponentDetail,
   showPrepareOverlay,
+  showSellZone,
   showSettings,
   showShopOdds,
   showStartScreen,
@@ -35,6 +38,7 @@ import {
   type MatchScreen,
 } from "./ui";
 import { CARD_BY_ID } from "../config/cards";
+import { sellPriceOf } from "../core/shop";
 import { MAP_BY_ID, MAP_IDS, mapName, pickMapForSeed, tallyMapVotes, type MapId } from "../config/maps";
 import type { BattleEvent, CardInstance } from "../core/state";
 import { totalAtk, totalHp, hasFreeEquipSlot } from "../core/state";
@@ -209,6 +213,8 @@ function onCardTap(uid: number): void {
     equips: card.equips,
     player: st().player,
     uid: card.uid,
+    growthAtk: card.growthAtk,
+    growthHp: card.growthHp,
     onUnequip: (weaponUid) => {
       if (act({ type: "unequip", player: ME, cardUid: card.uid, weaponUid })) {
         renderAll(true);
@@ -284,6 +290,9 @@ function onPointerMove(e: PointerEvent): void {
       document.body.appendChild(ghost);
       drag.ghost = ghost;
     }
+    // 自己已有的东西（棋盘/手牌/武器库）才有回收价——商店卡还没买，不显示出售区
+    const sellable = drag.source === "board" || drag.source === "hand" || drag.source === "weapon";
+    if (sellable) showSellZone(sellPriceOf(drag.configId));
   }
   if (drag.ghost) {
     drag.ghost.style.left = `${e.clientX}px`;
@@ -292,6 +301,9 @@ function onPointerMove(e: PointerEvent): void {
   const target = document.elementFromPoint(e.clientX, e.clientY);
   clearHover();
   if (!target) return;
+
+  // 悬在商店面板上 → 把「出售区」点亮（松手就是出售）
+  setSellZoneActive(Boolean(target.closest("#shoppanel")));
 
   if (drag.source === "weapon") {
     // 武器：高亮可装备的英雄卡
@@ -318,6 +330,7 @@ function onPointerUp(e: PointerEvent): void {
   drag = null;
   if (!d) return;
   clearHover();
+  hideSellZone();
   if (d.ghost) d.ghost.remove();
 
   if (!d.moved) {
@@ -423,16 +436,17 @@ function onUpgrade(): void {
 }
 
 /**
- * 一场战斗打完后统一收尾。
- * ⚠️ 人类出局后必须**立刻快进到终局并弹名次面板**——否则对局还在继续（AI 互打），
- * 而玩家的【准备】按钮因为 shopDone=true 永久禁用，界面就卡死了。
- * @returns true = 对局已结束（调用方不要再继续渲染商店流程）
+ * 战斗**播完之后**的收尾：出局或终局时快进到终局并弹名次面板。
+ * ⚠️ 必须在战斗视图点完【继续】之后才调用——之前版本在开战前就调，
+ * 导致"最后一局直接结算、看不到自己那场战斗"（用户反馈）。
+ * 出局时仍要快进，否则对局还在 AI 互打、而【准备】因 shopDone=true 永久禁用会卡死。
+ * @returns true = 对局已结束（调用方不要再渲染商店流程）
  */
-function afterBattle(): boolean {
+function finishGameIfNeeded(): boolean {
   const s = st();
   const meOut = s.player.eliminated;
   if (!meOut && !s.isOver) return false;
-  if (!s.isOver) s.endTurn(); // 已经出局→自动打完剩下的回合
+  if (!s.isOver) s.endTurn(); // 已经出局 → 自动打完剩下的回合
   renderAll();
   showFinalOverlay(s.finalRanking(), () => location.reload(), ME);
   return true;
@@ -446,8 +460,9 @@ function onReady(): void {
   renderOppStrip(s.state, vsId, (id) => showOpponentDetail(s.state, id));
 
   if (preview.opponentId === null) {
+    // 轮空：没有战斗可播，直接收尾
     s.fightTurn();
-    if (afterBattle()) return;
+    if (finishGameIfNeeded()) return;
     showToast("😴 你本轮轮空");
     vsId = null;
     renderAll();
@@ -459,20 +474,17 @@ function onReady(): void {
 function onFight(): void {
   const s = st();
   const log = s.fightTurn();
-  if (afterBattle()) return;
   const mine = extractMyBattle(log);
-  if (mine) {
-    showBattleView(
-      mine,
-      () => {
-        vsId = null;
-        renderAll();
-      },
-      ME,
-    );
-  } else {
+  // 先把这一场播完，玩家点了【继续】才结算终局
+  const done = () => {
     vsId = null;
+    if (finishGameIfNeeded()) return;
     renderAll();
+  };
+  if (mine) {
+    showBattleView(mine, done, ME);
+  } else {
+    done();
   }
 }
 

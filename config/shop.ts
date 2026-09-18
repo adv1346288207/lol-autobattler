@@ -5,6 +5,9 @@
  */
 
 export const shopConfig = {
+  /** 开局赠送：1 个绿色英雄（直接上阵） + 1 件绿色武器（进武器库） */
+  startingHeroQuality: "green" as const,
+  startingWeaponQuality: "green" as const,
   /** 商店每回合展示槽位数 */
   shopSize: 3,
   /** 手动刷新费用 */

@@ -3,11 +3,12 @@
  * 规则版本号 version 用于将来规则变更时兼容旧回放
  */
 import type { CardConfig } from "../config/cards";
-import { CARD_BY_ID } from "../config/cards";
+import { CARD_BY_ID, HERO_CARDS, WEAPON_CARDS } from "../config/cards";
 import { shopConfig } from "../config/shop";
 import { damageConfig } from "../config/damage";
 import { gameConfig } from "../config/game";
 import type { MapId } from "../config/maps";
+import { createRng, pick } from "./rng";
 
 export type Quality = "green" | "blue" | "purple" | "orange" | "gold";
 export type Phase = "shop" | "pair" | "battle" | "damage" | "ended";
@@ -154,6 +155,9 @@ export interface CardInstance {
   isFreeRefreshUsed: boolean; // 龙野类每回合状态位
   /** 已装备的武器（每名英雄 EQUIP_SLOTS 件；武器加成不计入 atk/hp，用 totalAtk/totalHp 读取） */
   equips: EquipInstance[];
+  /** 成长属性累计值（只有配置了 growth 的英雄才会涨；上阵期间每回合结算） */
+  growthAtk: number;
+  growthHp: number;
 }
 
 /** 装备加成合计（攻击） */
@@ -170,14 +174,14 @@ export function equipHp(card: CardInstance): number {
   return sum;
 }
 
-/** 含装备加成的攻击力 */
+/** 含装备与成长加成的攻击力 */
 export function totalAtk(card: CardInstance): number {
-  return card.atk + equipAtk(card);
+  return card.atk + card.growthAtk + equipAtk(card);
 }
 
-/** 含装备加成的生命上限 */
+/** 含装备与成长加成的生命上限 */
 export function totalHp(card: CardInstance): number {
-  return card.hp + equipHp(card);
+  return card.hp + card.growthHp + equipHp(card);
 }
 
 /** 装备槽是否还有空位 */
@@ -293,7 +297,7 @@ export type BattleEvent =
       survivors: { player: number; cardUid: number; hp: number }[];
     };
 
-export function createGame(seed: number, mapId: MapId | null = null): GameState {
+export function createGame(seed: number, mapId: MapId | null = null, opts: CreateGameOptions = {}): GameState {
   const players: PlayerState[] = Array.from({ length: gameConfig.playerCount }, (_, i) => ({
     id: i,
     isHuman: i === 0,
@@ -311,7 +315,7 @@ export function createGame(seed: number, mapId: MapId | null = null): GameState 
     rank: null,
   }));
 
-  return {
+  const state: GameState = {
     round: 1,
     phase: "shop",
     players,
@@ -323,6 +327,35 @@ export function createGame(seed: number, mapId: MapId | null = null): GameState 
     battleLog: [],
     version: RULES_VERSION,
   };
+  if (opts.startingLoadout !== false) grantStartingLoadout(state);
+  return state;
+}
+
+export interface CreateGameOptions {
+  /**
+   * 是否发放开局赠礼（1 个绿色英雄直接上阵 + 1 件绿色武器进武器库）。
+   * 默认 true —— 真实对局就是这样开局的。
+   * 只想测某个机制、需要干净棋盘的测试可以传 false。
+   */
+  startingLoadout?: boolean;
+}
+
+/**
+ * 开局赠礼：每人 1 个绿色英雄（**直接上阵**，省得新手不知道要拖） + 1 件绿色武器（放武器库，引导拖拽装备）。
+ * 用独立派生的 RNG，**不动主 RNG 序列**，所以不会改变已有 seed 的回放结果。
+ */
+function grantStartingLoadout(state: GameState): void {
+  const heroes = HERO_CARDS.filter((c) => c.quality === shopConfig.startingHeroQuality);
+  const weapons = WEAPON_CARDS.filter((c) => c.quality === shopConfig.startingWeaponQuality);
+  if (heroes.length === 0 || weapons.length === 0) return;
+
+  const rng = createRng((state.seed ^ 0x5eed1a7e) >>> 0);
+  for (const p of state.players) {
+    const hero = createCardInstance(state, pick(rng, heroes).id);
+    hero.position = 1;
+    p.board[0] = hero;
+    p.weapons.push(createEquipInstance(state, pick(rng, weapons).id));
+  }
 }
 
 /** 创建卡牌实例（从 state.nextUid 分配 UID） */
@@ -338,6 +371,8 @@ export function createCardInstance(state: GameState, configId: string, level: 1 
     position: null,
     isFreeRefreshUsed: false,
     equips: [],
+    growthAtk: 0,
+    growthHp: 0,
   };
 }
 

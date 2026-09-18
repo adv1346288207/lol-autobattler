@@ -72,7 +72,7 @@ describe("购买评分（纯函数）", () => {
 
 describe("AI 决策（真实状态）", () => {
   function botState(seed = 99) {
-    const state = createGame(seed);
+    const state = createGame(seed, null, { startingLoadout: false });
     const rng = createRng(seed);
     const bot = createBot(seed, 0);
     const p = state.players[0]!;
@@ -127,7 +127,7 @@ describe("AI 决策（真实状态）", () => {
 
   it("决策确定性：同 seed 的 AI 同状态给出相同动作", () => {
     const run = () => {
-      const state = createGame(4242);
+      const state = createGame(4242, null, { startingLoadout: false });
       const rng = createRng(4242);
       const bot = createBot(4242, 0);
       beginRound(state, rng);
@@ -149,7 +149,7 @@ describe("AI 决策（真实状态）", () => {
 
   it("始终能在保护次数内结束商店阶段", () => {
     for (const seed of [1, 2, 3, 4, 5]) {
-      const state = createGame(seed);
+      const state = createGame(seed, null, { startingLoadout: false });
       const rng = createRng(seed);
       beginRound(state, rng);
       const bot = createBot(seed, 0);
@@ -200,7 +200,7 @@ describe("站位（纯函数）", () => {
 
 describe("整局表现", () => {
   it("AI 会在前几回合把单位放上场，并激活羁绊", () => {
-    const state = createGame(20260817);
+    const state = createGame(20260817, null, { startingLoadout: false });
     const rng = createRng(20260817);
     const bots = new Map(state.players.map((p) => [p.id, createBot(20260817, p.id)]));
     beginRound(state, rng);
@@ -218,7 +218,7 @@ describe("整局表现", () => {
   });
 
   it("AI 会主动出售/替换：手牌不会长期堆满", () => {
-    const state = createGame(555);
+    const state = createGame(555, null, { startingLoadout: false });
     const rng = createRng(555);
     const bots = new Map(state.players.map((p) => [p.id, createBot(555, p.id)]));
     beginRound(state, rng);

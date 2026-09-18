@@ -3,7 +3,7 @@
  * 阶段流转：shop → pair → battle → damage →（回合数+1）→ shop
  * M1：实现 beginRound（商店阶段开局）；pair/battle/damage 在 M2 接入
  */
-import type { BattleEvent, GameState, Pairing, Phase } from "./state";
+import type { BattleEvent, GameState, Pairing, Phase, PlayerState } from "./state";
 import { alivePlayers } from "./state";
 import type { Rng } from "./rng";
 import { applyRoundIncome, autoUpgradeIfPossible } from "./economy";
@@ -13,6 +13,7 @@ import { pairPlayers } from "./matchmaking";
 import { simulateBattle } from "./battle";
 import { applyBattleResult } from "./damage";
 import { gameConfig } from "../config/game";
+import { CARD_BY_ID } from "../config/cards";
 
 export const PHASE_ORDER: Phase[] = ["shop", "pair", "battle", "damage"];
 
@@ -28,7 +29,8 @@ export function nextPhase(phase: Phase): Phase {
  * 1. 发金币（阶梯制）+ 自动 +1 经验
  * 2. freeRefresh 清零（龙野不累积）
  * 3. turn_start 被动触发（兰 +经验 / 龙野 +免费刷新）
- * 4. 商店自动刷新 3 张
+ * 4. 成长英雄结算（只有上阵的才涨）
+ * 5. 商店自动刷新 3 张
  */
 export function beginRound(state: GameState, rng: Rng): void {
   state.battleLog = [];
@@ -42,8 +44,26 @@ export function beginRound(state: GameState, rng: Rng): void {
       if (c) c.isFreeRefreshUsed = false;
     }
     triggerForPlayer(p, "turn_start");
+    applyGrowth(p, state.round);
     autoUpgradeIfPossible(p); // 经验≥所需 → 自动连续升级（升级后再刷商店，吃新等级概率）
     rollShop(state, rng, p);
+  }
+}
+
+/**
+ * 成长属性结算：**只有上阵（board）的卡**会涨。
+ * 攒下来的成长一直跟着这张卡——拿下场不会清零，但也不再继续涨。
+ * `growth.every` 控制每几个回合涨一次（默认每回合）。
+ */
+export function applyGrowth(player: PlayerState, round: number): void {
+  for (const card of player.board) {
+    if (!card) continue;
+    const g = CARD_BY_ID.get(card.configId)?.growth;
+    if (!g) continue;
+    const every = Math.max(1, g.every ?? 1);
+    if (round % every !== 0) continue;
+    card.growthAtk += g.atk ?? 0;
+    card.growthHp += g.hp ?? 0;
   }
 }
 
